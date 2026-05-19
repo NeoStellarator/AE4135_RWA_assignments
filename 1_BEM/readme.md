@@ -3,9 +3,9 @@
 Assignment choice: **Propeller**
 
 Project members:
-- Kasper
-- Greg Kaminski
-- Alfonso Medina Marrero
+- Grzegorz Kamiński        5732727
+- Alfonso Medina Marrero   5711274
+- Kasper Weel              5523648
 
 The project structure is as follows:
 ==== Folders
@@ -18,12 +18,13 @@ The project structure is as follows:
 ├───Rotor.py          : discretizes blade and evaluates integrated properties
 ├───tip_correction.py : contains tip correction codes
 ├───multi_rotor_analysis.py : evaluates rotors for different conditions (e.g. varying J)
+==== Additional Analysis
+├───optimizer.py: perform optimization to maximize power generation
+├───stag_pressure.py: perform analysis of the stagnation pressure distribution
 ==== Post-Processing Code
 ├───verification.ipynb : compares our BEM code with Ning and JavaProp
 ├───plotting_routines.py : contains plotting functions
-├───plotting_sandbox.ipynb : creates results plot for the assingment questions
-==== Post-Processing Code
-└───optimizer.py: perform optimization to maximize power generation
+└───plotting_sandbox.ipynb : creates results plot for the assingment questions (**run this one for all plots!!**)
 
 Python Requirements:
 - matplotlib

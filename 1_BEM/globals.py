@@ -1,6 +1,6 @@
 from pathlib import Path
 
-main_dir = Path.cwd()#.joinpath('1_BEM')
+main_dir = Path.cwd()
 # main_dir = Path.cwd().joinpath('1_BEM')
 data_dir = main_dir.joinpath("data")
 plot_dir = main_dir.joinpath("plots")
