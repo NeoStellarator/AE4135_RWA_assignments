@@ -196,6 +196,7 @@ class Rotor:
         save_df["a"]       = self.a
         save_df["aline"]   = self.aline
         save_df["Ct"]      = self.Ct
+        save_df["Cl"]      = self.Cl
         save_df["Cx"]      = self.Cx
         save_df["Cy"]      = self.Cy
         save_df["Cq"]      = self.CQ
@@ -294,6 +295,6 @@ if __name__ == "__main__":
 
     # rotor.print_geometry()
     # print(rotor.calculate_integral())
-    # rotor.export_dist(data_dir.joinpath('propeller_radial_data.csv'))
+    rotor.export_dist(data_dir.joinpath('propeller_radial_data.csv'))
     rotor.plot_check()
     # rotor.export("propeller_radial_data.csv")

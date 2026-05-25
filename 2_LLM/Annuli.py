@@ -23,14 +23,16 @@ class Annuli:
         self.polar_path = polar_path
         self.r = r
         self.beta = beta
-        self.n_azim = np.array([0,0,1])
+        self.n_azim = np.array([0,0,-1])
         self.n_axial = np.array([1,0,0])
-        self.n_tan = Rotation.from_euler("y",-beta,degrees=True).apply(self.n_azim)
+        self.n_tan = Rotation.from_euler("y",beta,degrees=True).apply(self.n_azim)
         self.chord = chord
         self.is_prop = True
 
         self.Vinf = Vinf
         self.Omega = Omega
+        self.phi=0
+        self.alpha=0
 
 
         self.V_i = np.zeros(3)
@@ -42,7 +44,7 @@ class Annuli:
         self.wake:LiftingLine = []
         if Omega == 0:
             n_wake = 1
-            period  = 1/self.Vinf[0]
+            period  = 3/self.Vinf[0]
         else:
             n_wake = 10
             period = 2*np.pi/self.Omega
@@ -109,28 +111,35 @@ class Annuli:
                               rho:float):
         if np.any(np.isnan(V_i)):
             V_i = np.zeros(3)
-        V_omega = self.n_azim * self.Omega*self.r
-        V = self.Vinf+V_i+V_omega
-        V_norm = np.linalg.norm(V)
+        V_omega = -self.n_azim * self.Omega*self.r
+        self.V = self.Vinf+V_i+V_omega
+        V_norm = np.linalg.norm(self.V)
 
         # print(V)
-        if V[2] == 0:
-            phi = 90
+        if self.V[2] == 0:
+            self.phi = 90    
         else:
-            phi=np.rad2deg(np.atan(V[2]/V[0]))
+            self.phi=np.rad2deg(np.atan2(self.V[0],self.V[2]))
         # print(f"phi = {phi}")
-        
-        alpha = phi-self.beta
+        if self.is_prop:
+            self.alpha = self.beta-self.phi
+        else:
+            self.alpha = self.phi-self.beta
+
         # print(alpha)
         # print(f"alpha = {alpha:.2f}")
-        Cl = self.calculate_Cl(alpha)
-        Cd = self.calculate_Cd(alpha)
+        Cl = self.calculate_Cl(self.alpha)
+        Cd = self.calculate_Cd(self.alpha)
         lift = 0.5*self.chord*rho*V_norm**2*Cl
         drag = 0.5*self.chord*rho*V_norm**2*Cd
 
-        phi_rad = np.deg2rad(phi)
-        F_azim = lift*np.sin(phi_rad)-drag*np.cos(phi_rad)
-        F_axial = lift*np.cos(phi_rad)+drag*np.sin(phi_rad)
+        phi_rad = np.deg2rad(self.phi)
+        if self.is_prop:
+            F_azim = lift*np.sin(phi_rad)-drag*np.cos(phi_rad)
+            F_axial = lift*np.cos(phi_rad)+drag*np.sin(phi_rad)
+        else:
+            F_azim = lift*np.sin(phi_rad)+drag*np.cos(phi_rad)
+            F_axial = lift*np.cos(phi_rad)-drag*np.sin(phi_rad)
 
         gamma = 0.5*self.chord*V_norm*Cl
         return gamma,F_azim,F_axial,Cl,Cd

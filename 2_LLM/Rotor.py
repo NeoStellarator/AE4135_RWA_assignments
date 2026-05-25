@@ -3,8 +3,8 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
-
-
+from scipy.spatial.transform import Rotation
+import pickle
 
 from LiftingLine import LiftingLine
 from Annuli import Annuli
@@ -58,40 +58,78 @@ class Rotor:
             r_R_bound = (r_R_trailing[1:]+r_R_trailing[:-1])/2
             r_bound = r_R_bound*self.R
             c_bound = c_R_func(r_R_bound)*self.R
+            self.c_bound = c_bound
             beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
 
-            
+        for blade in range(self.B):
+            blade_angle = 2 * np.pi / self.B * blade
+            rot = Rotation.from_euler("x", blade_angle)
 
             for idx in range(len(r_bound)):
-                tv_inner_x1 = c_trailing[idx]*np.cos(beta_trailing[idx])
-                tv_inner_z1 = c_trailing[idx]*np.sin(beta_trailing[idx])
+                tv_inner_z1 = 5/4*c_trailing[idx]*np.cos(beta_trailing[idx])
+                tv_inner_x1 = 5/4*c_trailing[idx]*np.sin(beta_trailing[idx])
                 tv_inner_y1 = r_trailing[idx]
-                tv_inner_x2 = c_trailing[idx]/4*np.cos(beta_trailing[idx])
-                tv_inner_z2 = c_trailing[idx]/4*np.sin(beta_trailing[idx])
+                tv_inner_z2 = c_trailing[idx]/4*np.cos(beta_trailing[idx])
+                tv_inner_x2 = c_trailing[idx]/4*np.sin(beta_trailing[idx])
                 tv_inner_y2 = r_trailing[idx]
-                tv_inner = LiftingLine(tv_inner_x1,tv_inner_y1,tv_inner_z1,tv_inner_x2,tv_inner_y2,tv_inner_z2)
-                
-                tv_outer_x1 = c_trailing[idx+1]/4*np.cos(beta_trailing[idx+1])
-                tv_outer_z1 = c_trailing[idx+1]/4*np.sin(beta_trailing[idx+1])
+                p_inner1 = rot.apply([tv_inner_x1, tv_inner_y1, tv_inner_z1])
+                p_inner2 = rot.apply([tv_inner_x2, tv_inner_y2, tv_inner_z2])
+                tv_inner = LiftingLine(*p_inner1, *p_inner2)
+
+                tv_outer_z1 = c_trailing[idx+1]/4*np.cos(beta_trailing[idx+1])
+                tv_outer_x1 = c_trailing[idx+1]/4*np.sin(beta_trailing[idx+1])
                 tv_outer_y1 = r_trailing[idx+1]
-                tv_outer_x2 = c_trailing[idx+1]*np.cos(beta_trailing[idx+1])
-                tv_outer_z2 = c_trailing[idx+1]*np.sin(beta_trailing[idx+1])
+                tv_outer_z2 = 5/4*c_trailing[idx+1]*np.cos(beta_trailing[idx+1])
+                tv_outer_x2 = 5/4*c_trailing[idx+1]*np.sin(beta_trailing[idx+1])
                 tv_outer_y2 = r_trailing[idx+1]
-                tv_outer = LiftingLine(tv_outer_x1,tv_outer_y1,tv_outer_z1,tv_outer_x2,tv_outer_y2,tv_outer_z2)
+                p_outer1 = rot.apply([tv_outer_x1, tv_outer_y1, tv_outer_z1])
+                p_outer2 = rot.apply([tv_outer_x2, tv_outer_y2, tv_outer_z2])
+                tv_outer = LiftingLine(*p_outer1, *p_outer2)
 
-                bv_x1 = tv_inner_x2
-                bv_x2 = tv_outer_x1
-                bv_z1 = tv_inner_z2
-                bv_z2 = tv_outer_z1
-                bv_y1 = tv_inner_y2
-                bv_y2 = tv_outer_y1
-                bv = LiftingLine(bv_x1, bv_y1, bv_z1, bv_x2,bv_y2,bv_z2)
+                p_bv1 = p_inner2
+                p_bv2 = p_outer1
+                bv = LiftingLine(*p_bv1, *p_bv2)
 
-                cp_x = 3/4*c_bound[idx]*np.cos(beta_bound[idx])
-                cp_y = r_bound[idx]
-                cp_z = 3/4*c_bound[idx]*np.sin(beta_bound[idx])
-                ann = Annuli(polar_path=polar_path,r=r_bound[idx],chord = c_bound[idx],beta=beta_bound[idx],Vinf=Vinf,Omega=Omega,tv_inner=tv_inner,tv_outer=tv_outer,bv=bv,cp_x=cp_x,cp_y=cp_y,cp_z=cp_z)
+                cp = rot.apply([3/4*c_bound[idx]*np.sin(beta_bound[idx]),
+                                r_bound[idx],
+                                3/4*c_bound[idx]*np.cos(beta_bound[idx])])
+
+                ann = Annuli(polar_path=polar_path, r=r_bound[idx], chord=c_bound[idx],
+                            beta=np.rad2deg(beta_bound[idx]), Vinf=Vinf, Omega=Omega,
+                            tv_inner=tv_inner, tv_outer=tv_outer, bv=bv,
+                            cp_x=cp[0], cp_y=cp[1], cp_z=cp[2])
                 self.annuli.append(ann)
+
+            # for idx in range(len(r_bound)):
+            #     tv_inner_x1 = c_trailing[idx]*np.cos(beta_trailing[idx])
+            #     tv_inner_z1 = c_trailing[idx]*np.sin(beta_trailing[idx])
+            #     tv_inner_y1 = r_trailing[idx]
+            #     tv_inner_x2 = c_trailing[idx]/4*np.cos(beta_trailing[idx])
+            #     tv_inner_z2 = c_trailing[idx]/4*np.sin(beta_trailing[idx])
+            #     tv_inner_y2 = r_trailing[idx]
+            #     tv_inner = LiftingLine(tv_inner_x1,tv_inner_y1,tv_inner_z1,tv_inner_x2,tv_inner_y2,tv_inner_z2)
+                
+            #     tv_outer_x1 = c_trailing[idx+1]/4*np.cos(beta_trailing[idx+1])
+            #     tv_outer_z1 = c_trailing[idx+1]/4*np.sin(beta_trailing[idx+1])
+            #     tv_outer_y1 = r_trailing[idx+1]
+            #     tv_outer_x2 = c_trailing[idx+1]*np.cos(beta_trailing[idx+1])
+            #     tv_outer_z2 = c_trailing[idx+1]*np.sin(beta_trailing[idx+1])
+            #     tv_outer_y2 = r_trailing[idx+1]
+            #     tv_outer = LiftingLine(tv_outer_x1,tv_outer_y1,tv_outer_z1,tv_outer_x2,tv_outer_y2,tv_outer_z2)
+
+            #     bv_x1 = tv_inner_x2
+            #     bv_x2 = tv_outer_x1
+            #     bv_z1 = tv_inner_z2
+            #     bv_z2 = tv_outer_z1
+            #     bv_y1 = tv_inner_y2
+            #     bv_y2 = tv_outer_y1
+            #     bv = LiftingLine(bv_x1, bv_y1, bv_z1, bv_x2,bv_y2,bv_z2)
+
+            #     cp_x = 3/4*c_bound[idx]*np.cos(beta_bound[idx])
+            #     cp_y = r_bound[idx]
+            #     cp_z = 3/4*c_bound[idx]*np.sin(beta_bound[idx])
+            #     ann = Annuli(polar_path=polar_path,r=r_bound[idx],chord = c_bound[idx],beta=beta_bound[idx],Vinf=Vinf,Omega=Omega,tv_inner=tv_inner,tv_outer=tv_outer,bv=bv,cp_x=cp_x,cp_y=cp_y,cp_z=cp_z)
+            #     self.annuli.append(ann)
 
             
 
@@ -116,6 +154,8 @@ class Rotor:
         Cl_lst = []
         Cd_lst = []
         y_lst =[]
+        gamma_lst = []
+        alpha_lst = []
         for ann_i in self.annuli:
             
             gamma,F_azim,F_axial,Cl,Cd = ann_i.calculate_performance(ann_i.V_i,self.rho)
@@ -126,9 +166,16 @@ class Rotor:
             Cd_lst.append(Cd)
             V_i_lst.append(ann_i.V_i)
             y_lst.append(ann_i.r)
-        return V_i_lst,F_azim_lst,F_axial_lst,Cl_lst,Cd_lst,y_lst
+            gamma_lst.append(gamma)
+            alpha_lst.append(ann_i.alpha)
+        return V_i_lst,F_azim_lst,F_axial_lst,Cl_lst,Cd_lst,y_lst,gamma_lst,alpha_lst
+    def calculate_integral_performance(self):
+        V_i_lst,F_azim_lst,F_axial_lst,Cl_lst,Cd_lst,y_lst,gamma_lst,alpha_lst=self.calculate_spanwise_performance()
+        S = np.trapezoid(self.c_bound,y_lst)
+        Cl_total = np.trapezoid(Cl_lst*self.c_bound,y_lst)/(S)
+        return Cl_total
 
-    def solve(self, tol=1e-6, max_iter=1000,step_size = 0.8):
+    def solve(self, tol=0.01, max_iter=1000,step_size = 0.01):
 
         for iteration in range(max_iter):
             V_i_old = np.array([ann.V_i for ann in self.annuli])
@@ -178,6 +225,68 @@ class Rotor:
         ax.set_zlabel('Z')
         plt.tight_layout()
         plt.show()
+    def plot_performance(self):
+        V_i_lst, F_azim_lst, F_axial_lst, Cl_lst, Cd_lst, y_lst,gamma_lst,alpha_lst = self.calculate_spanwise_performance()
+        # print(self.calculate_integral_performance())
+
+        # Unpack V_i components
+        V_i_x = [v[0] for v in V_i_lst]
+        V_i_y = [v[1] for v in V_i_lst]
+        V_i_z = [v[2] for v in V_i_lst]
+        phi_lst = [ann.phi for ann in self.annuli]
+
+        V_lst = [ann.V for ann in self.annuli]
+        V_x = [v[0] for v in V_lst]
+        V_y = [v[1] for v in V_lst]
+        V_z = [v[2] for v in V_lst]
+        fig, axes = plt.subplots(4, 4, figsize=(18, 14), constrained_layout=True)
+        fig.suptitle('Spanwise Performance', fontsize=14)
+
+        plots = [
+            (Cl_lst,      'Cl',              'Lift Coefficient'),
+            (Cd_lst,      'Cd',              'Drag Coefficient'),
+            (F_azim_lst,  'F_azim [N]',      'Azimuthal Force'),
+            (F_axial_lst, 'F_axial [N]',     'Axial Force'),
+            (V_i_x,       'V_i_x [m/s]',    'Induced Velocity X'),
+            (V_i_y,       'V_i_y [m/s]',    'Induced Velocity Y'),
+            (V_i_z,       'V_i_z [m/s]',    'Induced Velocity Z'),
+            (gamma_lst,   r'$\Gamma$',      'Gamma'),
+            (alpha_lst,   r'$\alpha$',      'AoA'),
+            (phi_lst,   r'$\phi$',      'Inflow angle'),
+            (V_x,       'V_x [m/s]',    'Total Velocity X'),
+            (V_y,       'V_y [m/s]',    'Total Velocity Y'),
+            (V_z,       'V_z [m/s]',    'Total Velocity Z'),
+        ]
+        save_data = {
+            "Cl": (Cl_lst, "Cl", "Lift Coefficient"),
+            "Cd": (Cd_lst, "Cd", "Drag Coefficient"),
+            "F_azim": (F_azim_lst, "F_azim [N]", "Azimuthal Force"),
+            "F_axial": (F_axial_lst, "F_axial [N]", "Axial Force"),
+            "V_i_x": (V_i_x, "V_i_x [m/s]", "Induced Velocity X"),
+            "V_i_y": (V_i_y, "V_i_y [m/s]", "Induced Velocity Y"),
+            "V_i_z": (V_i_z, "V_i_z [m/s]", "Induced Velocity Z"),
+            "gamma": (gamma_lst, r"$\Gamma$", "Gamma"),
+            "alpha": (alpha_lst, r"$\alpha$", "AoA"),
+            "phi": (phi_lst, r"$\phi$", "Inflow angle"),
+            "V_x": (V_x, "V_x [m/s]", "Total Velocity X"),
+            "V_y": (V_y, "V_y [m/s]", "Total Velocity Y"),
+            "V_z": (V_z, "V_z [m/s]", "Total Velocity Z"),
+            "y_lst":y_lst
+        }
+        with open("LLM_data.pkl", "wb") as f:
+            pickle.dump(save_data, f)
+        for ax, (data, ylabel, title) in zip(axes.flat, plots):
+            ax.plot(y_lst[:self.n_elem], data[:self.n_elem])
+            ax.set_xlabel('Span y [m]')
+            ax.set_ylabel(ylabel)
+            ax.set_title(title)
+            ax.grid(True)
+
+        for ax in axes.flat[len(plots):]:
+            ax.set_visible(False)
+
+        # plt.tight_layout()
+        plt.show()
             
 
 if __name__ == "__main__":
@@ -185,40 +294,40 @@ if __name__ == "__main__":
     Vinf_wing = np.array([1,0,0])
     c_R_func:Callable = lambda r_R : 0.18-0.06*r_R
     twst_func:Callable = lambda r_R : -50*r_R+35
-
-    wing_c_R_func:Callable = lambda r_R: np.ones(shape=r_R.shape) #=1
+    R = 200
+    wing_c_R_func:Callable = lambda r_R: np.ones(shape=r_R.shape)/10 #=1
+    # wing_c_R_func:Callable = lambda r_R: np.ones(shape=r_R.shape) -0.4*r_R
     wing_twst_func:Callable = lambda r_R : r_R*0
-    wing = Rotor(B=1,
-                  R=1,
-                  r_R_H=0,
-                  c_R_func=wing_c_R_func,
-                  twst_func=wing_twst_func,
-                  pitch=0,
-                  polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
-                  Omega = 0,
-                  Vinf=Vinf_wing,
-                  rho=1,
-                  n_elem=13,
-                  dist_elem="uniform")
-    wing.plot_blade()
-    wing.solve(tol=0.01,step_size=0.01)
-    V_i_lst,F_azim_lst,F_axial_lst,Cl_lst,Cd_lst,y_lst=wing.calculate_spanwise_performance()
-    print(Cl_lst)
-    print(F_azim_lst)
-    plt.plot(y_lst,Cl_lst)
-    plt.show()
-    # rotor = Rotor(B=2,
-    #               R=0.7,
-    #               r_R_H=0.25,
-    #               c_R_func=c_R_func,
-    #               twst_func=twst_func,
-    #               pitch=45,
+    # wing = Rotor(B=1,
+    #               R=R,
+    #               r_R_H=0,
+    #               c_R_func=wing_c_R_func,
+    #               twst_func=wing_twst_func,
+    #               pitch=90,
     #               polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
-    #               Omega = 225,
-    #               Vinf=Vinf,
-    #               rho=1.067,
-    #               n_elem=15,
+    #               Omega = 0,
+    #               Vinf=Vinf_wing,
+    #               rho=1,
+    #               n_elem=30,
     #               dist_elem="uniform")
+    # wing.plot_blade()
+    # wing.solve(tol=1e-2,step_size=0.01)
+    # wing.plot_performance()
+    
+    rotor = Rotor(B=6,
+                  R=0.7,
+                  r_R_H=0.25,
+                  c_R_func=c_R_func,
+                  twst_func=twst_func,
+                  pitch=45,
+                  polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
+                  Omega = 225,
+                  Vinf=Vinf,
+                  rho=1.067,
+                  n_elem=5,
+                  dist_elem="uniform")
 
-    # rotor.solve()
-    # rotor.plot_blade()
+    
+    rotor.plot_blade()
+    rotor.solve(tol = 0.01,step_size=0.06)
+    rotor.plot_performance()
