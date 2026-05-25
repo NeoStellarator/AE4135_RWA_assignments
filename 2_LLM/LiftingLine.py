@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class LiftingLine:
     def __init__(self,
                  x1:float, 
@@ -33,7 +34,7 @@ class LiftingLine:
         r1r2_norm = np.linalg.norm(r1r2_cross)
         induced_velocity = gamma / (4 * np.pi) * r1r2_cross/(r1r2_norm**2)*(r0@(r1/np.linalg.norm(r1)-r2/np.linalg.norm(r2)))
         return induced_velocity
-
+    
     def calculate_induced_velocity(self, 
                                    x:float,
                                    y:float,
@@ -47,10 +48,16 @@ class LiftingLine:
         r1r2_norm = np.linalg.norm(r1r2_cross)
         induced_velocity = gamma / (4 * np.pi) * r1r2_cross/(r1r2_norm**2)*(r0@(r1/np.linalg.norm(r1)-r2/np.linalg.norm(r2)))
         return induced_velocity
+    
     def plot_on_ax(self,ax,color= 'blue'):
-        ax.plot([self.x1, self.x2], 
-                [self.y1, self.y2], 
-                [self.z1, self.z2], color=color)
+        # ax.plot([self.x1, self.x2], 
+        #         [self.y1, self.y2], 
+        #         [self.z1, self.z2], color=color)
+        ax.quiver(self.x1, self.y1, self.z1,
+          self.x2 - self.x1,
+          self.y2 - self.y1,
+          self.z2 - self.z1,
+          color=color, arrow_length_ratio=0.05)
 if __name__ == "__main__":
     ll = LiftingLine(0,0.2,0,0,0,1)
 
