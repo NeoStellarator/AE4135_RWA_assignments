@@ -12,7 +12,8 @@ from globals import main_dir,data_dir
 
 
 class Rotor:
-    def __init__(self,# Geometry
+    def __init__(self,
+        # Geometry
         B : int,
         R : float,
         r_R_H : float,
@@ -27,7 +28,10 @@ class Rotor:
         # Other parameters
         n_elem:int=100,
         dist_elem:Literal['uniform','cosine']='uniform',
+        periods:int=1,
+        n_elems_per_wake:int = 10,
         isPropeller:bool=True):
+        
         # Rotor geometry
         self.B = B                    
         self.R = R
@@ -47,7 +51,11 @@ class Rotor:
         # Discretizaiton scheme
         self.n_elem = n_elem
         self.dist_elem = dist_elem
+        self.periods = periods
+        self.n_elems_per_wake = n_elems_per_wake
+        ## Generating lifting lines
         self.annuli :List[Annuli] = []
+        
         if dist_elem == "uniform":
             r_R_trailing = np.linspace(r_R_H, 1, n_elem+1)
             r_trailing = r_R_trailing*self.R
@@ -57,8 +65,8 @@ class Rotor:
 
             r_R_bound = (r_R_trailing[1:]+r_R_trailing[:-1])/2
             r_bound = r_R_bound*self.R
-            c_bound = c_R_func(r_R_bound)*self.R
-            self.c_bound = c_bound
+
+            self.c_bound = c_R_func(r_R_bound)*self.R # used later
             beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
 
         for blade in range(self.B):
@@ -66,127 +74,132 @@ class Rotor:
             rot = Rotation.from_euler("x", blade_angle)
 
             for idx in range(len(r_bound)):
-                tv_inner_z1 = 5/4*c_trailing[idx]*np.cos(beta_trailing[idx])
+                # Generating trailing vortices
                 tv_inner_x1 = 5/4*c_trailing[idx]*np.sin(beta_trailing[idx])
                 tv_inner_y1 = r_trailing[idx]
-                tv_inner_z2 = c_trailing[idx]/4*np.cos(beta_trailing[idx])
+                tv_inner_z1 = 5/4*c_trailing[idx]*np.cos(beta_trailing[idx])
+                
                 tv_inner_x2 = c_trailing[idx]/4*np.sin(beta_trailing[idx])
                 tv_inner_y2 = r_trailing[idx]
+                tv_inner_z2 = c_trailing[idx]/4*np.cos(beta_trailing[idx])
+
                 p_inner1 = rot.apply([tv_inner_x1, tv_inner_y1, tv_inner_z1])
                 p_inner2 = rot.apply([tv_inner_x2, tv_inner_y2, tv_inner_z2])
                 tv_inner = LiftingLine(*p_inner1, *p_inner2)
 
-                tv_outer_z1 = c_trailing[idx+1]/4*np.cos(beta_trailing[idx+1])
+                
                 tv_outer_x1 = c_trailing[idx+1]/4*np.sin(beta_trailing[idx+1])
                 tv_outer_y1 = r_trailing[idx+1]
-                tv_outer_z2 = 5/4*c_trailing[idx+1]*np.cos(beta_trailing[idx+1])
+                tv_outer_z1 = c_trailing[idx+1]/4*np.cos(beta_trailing[idx+1])
+
                 tv_outer_x2 = 5/4*c_trailing[idx+1]*np.sin(beta_trailing[idx+1])
                 tv_outer_y2 = r_trailing[idx+1]
+                tv_outer_z2 = 5/4*c_trailing[idx+1]*np.cos(beta_trailing[idx+1])
+
                 p_outer1 = rot.apply([tv_outer_x1, tv_outer_y1, tv_outer_z1])
                 p_outer2 = rot.apply([tv_outer_x2, tv_outer_y2, tv_outer_z2])
                 tv_outer = LiftingLine(*p_outer1, *p_outer2)
 
+                # generating bound vortex
                 p_bv1 = p_inner2
                 p_bv2 = p_outer1
                 bv = LiftingLine(*p_bv1, *p_bv2)
 
-                cp = rot.apply([3/4*c_bound[idx]*np.sin(beta_bound[idx]),
+                cp = rot.apply([3/4*self.c_bound[idx]*np.sin(beta_bound[idx]),
                                 r_bound[idx],
-                                3/4*c_bound[idx]*np.cos(beta_bound[idx])])
+                                3/4*self.c_bound[idx]*np.cos(beta_bound[idx])])
 
-                ann = Annuli(polar_path=polar_path, r=r_bound[idx], chord=c_bound[idx],
-                            beta=np.rad2deg(beta_bound[idx]), Vinf=Vinf, Omega=Omega,
+                ann = Annuli(polar_path=polar_path, r=r_bound[idx], chord=self.c_bound[idx],
+                            beta=np.rad2deg(beta_bound[idx]), Vinf=Vinf,rho=self.rho, Omega=Omega,
                             tv_inner=tv_inner, tv_outer=tv_outer, bv=bv,
-                            cp_x=cp[0], cp_y=cp[1], cp_z=cp[2])
+                            cp_x=cp[0], cp_y=cp[1], cp_z=cp[2],periods = periods,n_elems_per_wake=n_elems_per_wake)
                 self.annuli.append(ann)
-
-            # for idx in range(len(r_bound)):
-            #     tv_inner_x1 = c_trailing[idx]*np.cos(beta_trailing[idx])
-            #     tv_inner_z1 = c_trailing[idx]*np.sin(beta_trailing[idx])
-            #     tv_inner_y1 = r_trailing[idx]
-            #     tv_inner_x2 = c_trailing[idx]/4*np.cos(beta_trailing[idx])
-            #     tv_inner_z2 = c_trailing[idx]/4*np.sin(beta_trailing[idx])
-            #     tv_inner_y2 = r_trailing[idx]
-            #     tv_inner = LiftingLine(tv_inner_x1,tv_inner_y1,tv_inner_z1,tv_inner_x2,tv_inner_y2,tv_inner_z2)
-                
-            #     tv_outer_x1 = c_trailing[idx+1]/4*np.cos(beta_trailing[idx+1])
-            #     tv_outer_z1 = c_trailing[idx+1]/4*np.sin(beta_trailing[idx+1])
-            #     tv_outer_y1 = r_trailing[idx+1]
-            #     tv_outer_x2 = c_trailing[idx+1]*np.cos(beta_trailing[idx+1])
-            #     tv_outer_z2 = c_trailing[idx+1]*np.sin(beta_trailing[idx+1])
-            #     tv_outer_y2 = r_trailing[idx+1]
-            #     tv_outer = LiftingLine(tv_outer_x1,tv_outer_y1,tv_outer_z1,tv_outer_x2,tv_outer_y2,tv_outer_z2)
-
-            #     bv_x1 = tv_inner_x2
-            #     bv_x2 = tv_outer_x1
-            #     bv_z1 = tv_inner_z2
-            #     bv_z2 = tv_outer_z1
-            #     bv_y1 = tv_inner_y2
-            #     bv_y2 = tv_outer_y1
-            #     bv = LiftingLine(bv_x1, bv_y1, bv_z1, bv_x2,bv_y2,bv_z2)
-
-            #     cp_x = 3/4*c_bound[idx]*np.cos(beta_bound[idx])
-            #     cp_y = r_bound[idx]
-            #     cp_z = 3/4*c_bound[idx]*np.sin(beta_bound[idx])
-            #     ann = Annuli(polar_path=polar_path,r=r_bound[idx],chord = c_bound[idx],beta=beta_bound[idx],Vinf=Vinf,Omega=Omega,tv_inner=tv_inner,tv_outer=tv_outer,bv=bv,cp_x=cp_x,cp_y=cp_y,cp_z=cp_z)
-            #     self.annuli.append(ann)
-
-            
-
-    def calculate_induced_velocities(self):
-        V_i_lst = []
-        for ann_i in self.annuli:
-            V_i = np.zeros(3)
+        self.m_induced = self.generate_induction_matrix()
+          
+    def generate_induction_matrix(self):
+        
+        n_ann = len(self.annuli)
+        n_line = n_ann*(self.periods*self.n_elems_per_wake*2+3)
+        m_ind = np.zeros((n_ann, n_line,3))
+        gamma = 1
+        for i in range(len(self.annuli)):
+            ann_i = self.annuli[i]
+            j=0
             for ann_j in self.annuli:
-                gamma,F_azim,F_axial,Cl,Cd = ann_j.calculate_performance(ann_j.V_i,self.rho)
-                V_i += ann_j.tv_inner.calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
-                V_i += ann_j.tv_outer.calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
-                V_i += ann_j.bv.calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
+                m_ind[i,j]=ann_j.tv_inner.calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
+                j+=1
+                m_ind[i,j]= ann_j.tv_outer.calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
+                j+=1
+                m_ind[i,j]= ann_j.bv.calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
+                j+=1
                 for i_wake in range(len(ann_j.inner_wake_lines)):
-                    V_i+=ann_j.inner_wake_lines[i_wake].calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
-                    V_i+=ann_j.outer_wake_lines[i_wake].calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
-            V_i_lst.append(V_i)
-        return V_i_lst
+                    m_ind[i,j]=ann_j.inner_wake_lines[i_wake].calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
+                    j+=1
+                    m_ind[i,j]=ann_j.outer_wake_lines[i_wake].calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
+                    j+=1
+        return m_ind
+    def generate_gamma_matrix(self):
+        n_ann = len(self.annuli)
+        n_lines_per_annuli = self.periods*self.n_elems_per_wake*2+3
+        n_line = n_ann*n_lines_per_annuli
+
+        m_gamma = np.zeros(n_line)
+
+        for i in range(len(self.annuli)):
+            ann_i = self.annuli[i]
+            gamma,F_azim,F_axial,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
+            m_gamma[i*n_lines_per_annuli:(i+1)*n_lines_per_annuli]=gamma
+        return m_gamma
+ 
+    def calculate_induced_velocities(self):
+        m_gamma = self.generate_gamma_matrix()
+        u_ind = self.m_induced[..., 0] @ m_gamma  # (n, m) @ (m,) → (n,)
+        v_ind = self.m_induced[..., 1] @ m_gamma  # (n, m) @ (m,) → (n,)
+        w_ind = self.m_induced[..., 2] @ m_gamma  # (n, m) @ (m,) → (n,)
+
+        result = np.stack([u_ind, v_ind, w_ind], axis=-1)  # → (n, 3)
+        return result
     def calculate_spanwise_performance(self):
-        V_i_lst = []
-        F_azim_lst = []
-        F_axial_lst = []
-        Cl_lst = []
-        Cd_lst = []
-        y_lst =[]
-        gamma_lst = []
-        alpha_lst = []
+        perf_dict = {
+            "V_i":[],
+            "F_azim": [],
+            "F_axial": [],
+            "Cl": [],
+            "Cd": [],
+            "y": [],
+            "gamma": [],
+            "alpha": [],
+            "phi": [],
+        }
         for ann_i in self.annuli:
             
-            gamma,F_azim,F_axial,Cl,Cd = ann_i.calculate_performance(ann_i.V_i,self.rho)
-            
-            F_azim_lst.append(F_azim)
-            F_axial_lst.append(F_axial)
-            Cl_lst.append(Cl)
-            Cd_lst.append(Cd)
-            V_i_lst.append(ann_i.V_i)
-            y_lst.append(ann_i.r)
-            gamma_lst.append(gamma)
-            alpha_lst.append(ann_i.alpha)
-        return V_i_lst,F_azim_lst,F_axial_lst,Cl_lst,Cd_lst,y_lst,gamma_lst,alpha_lst
+            gamma,F_azim,F_axial,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
+            perf_dict["V_i"].append(ann_i.V_i)
+            perf_dict["F_azim"].append(F_azim)
+            perf_dict["F_axial"].append(F_axial)
+            perf_dict["Cl"].append(Cl)
+            perf_dict["Cd"].append(Cd)
+            perf_dict["y"].append(ann_i.r)
+            perf_dict["gamma"].append(gamma)
+            perf_dict["alpha"].append(ann_i.alpha)
+            perf_dict["phi"].append(ann_i.alpha)
+        return perf_dict
     def calculate_integral_performance(self):
-        V_i_lst,F_azim_lst,F_axial_lst,Cl_lst,Cd_lst,y_lst,gamma_lst,alpha_lst=self.calculate_spanwise_performance()
-        S = np.trapezoid(self.c_bound,y_lst)
-        Cl_total = np.trapezoid(Cl_lst*self.c_bound,y_lst)/(S)
+        perf_dict=self.calculate_spanwise_performance()
+        S = np.trapezoid(self.c_bound,perf_dict["y"])
+        Cl_total = np.trapezoid(perf_dict["Cl"]*self.c_bound,perf_dict["y"])/(S)
         return Cl_total
 
     def solve(self, tol=0.01, max_iter=1000,step_size = 0.01):
 
         for iteration in range(max_iter):
+            gamma_lst = self.generate_gamma_matrix()
             V_i_old = np.array([ann.V_i for ann in self.annuli])
             V_i_new = self.calculate_induced_velocities()
             for i in range(len(V_i_new)):
                 self.annuli[i].V_i = (V_i_new[i]*step_size+V_i_old[i]*(1-step_size))
-            # V_i_new = np.array([ann.V_i for ann in self.annuli])
             print(f"iteration {iteration} with max error: {np.max(np.abs(V_i_new - V_i_old))}")
             if np.max(np.abs(V_i_new - V_i_old)) < tol:
-                # print(f"V_i_new = {V_i_new}")
-
                 print(f"Converged in {iteration+1} iterations")
                 return
         print("Did not converge V_i:")
@@ -202,8 +215,6 @@ class Rotor:
             ann.tv_outer.plot_on_ax(ax)
             ann.bv.plot_on_ax(ax)
             ax.scatter(ann.cp_x, ann.cp_y, ann.cp_z, color='red')
-            # for wake_p in ann.inner_wake_points:
-            #     ax.scatter(wake_p[0],wake_p[1],wake_p[2],color='blue')
             for wake_ll in ann.inner_wake_lines:
                 wake_ll.plot_on_ax(ax)
             for wake_ll in ann.outer_wake_lines:
@@ -225,14 +236,16 @@ class Rotor:
         ax.set_zlabel('Z')
         plt.tight_layout()
         plt.show()
+    def save_performance(self,file_name="LLM_data.pkl"):
+        perf_dict = self.calculate_spanwise_performance()
+        with open(file_name, "wb") as f:
+            pickle.dump(perf_dict, f)
     def plot_performance(self):
-        V_i_lst, F_azim_lst, F_axial_lst, Cl_lst, Cd_lst, y_lst,gamma_lst,alpha_lst = self.calculate_spanwise_performance()
-        # print(self.calculate_integral_performance())
-
-        # Unpack V_i components
-        V_i_x = [v[0] for v in V_i_lst]
-        V_i_y = [v[1] for v in V_i_lst]
-        V_i_z = [v[2] for v in V_i_lst]
+        perf_dict = self.calculate_spanwise_performance()
+       
+        V_i_x = [v[0] for v in perf_dict["V_i"]]
+        V_i_y = [v[1] for v in perf_dict["V_i"]]
+        V_i_z = [v[2] for v in perf_dict["V_i"]]
         phi_lst = [ann.phi for ann in self.annuli]
 
         V_lst = [ann.V for ann in self.annuli]
@@ -243,40 +256,23 @@ class Rotor:
         fig.suptitle('Spanwise Performance', fontsize=14)
 
         plots = [
-            (Cl_lst,      'Cl',              'Lift Coefficient'),
-            (Cd_lst,      'Cd',              'Drag Coefficient'),
-            (F_azim_lst,  'F_azim [N]',      'Azimuthal Force'),
-            (F_axial_lst, 'F_axial [N]',     'Axial Force'),
+            (perf_dict["Cl"],      'Cl',              'Lift Coefficient'),
+            (perf_dict["Cd"],      'Cd',              'Drag Coefficient'),
+            (perf_dict["F_azim"],  'F_azim [N]',      'Azimuthal Force'),
+            (perf_dict["F_axial"], 'F_axial [N]',     'Axial Force'),
             (V_i_x,       'V_i_x [m/s]',    'Induced Velocity X'),
             (V_i_y,       'V_i_y [m/s]',    'Induced Velocity Y'),
             (V_i_z,       'V_i_z [m/s]',    'Induced Velocity Z'),
-            (gamma_lst,   r'$\Gamma$',      'Gamma'),
-            (alpha_lst,   r'$\alpha$',      'AoA'),
+            (perf_dict["gamma"],   r'$\Gamma$',      'Gamma'),
+            (perf_dict["alpha"],   r'$\alpha$',      'AoA'),
             (phi_lst,   r'$\phi$',      'Inflow angle'),
             (V_x,       'V_x [m/s]',    'Total Velocity X'),
             (V_y,       'V_y [m/s]',    'Total Velocity Y'),
             (V_z,       'V_z [m/s]',    'Total Velocity Z'),
         ]
-        save_data = {
-            "Cl": (Cl_lst, "Cl", "Lift Coefficient"),
-            "Cd": (Cd_lst, "Cd", "Drag Coefficient"),
-            "F_azim": (F_azim_lst, "F_azim [N]", "Azimuthal Force"),
-            "F_axial": (F_axial_lst, "F_axial [N]", "Axial Force"),
-            "V_i_x": (V_i_x, "V_i_x [m/s]", "Induced Velocity X"),
-            "V_i_y": (V_i_y, "V_i_y [m/s]", "Induced Velocity Y"),
-            "V_i_z": (V_i_z, "V_i_z [m/s]", "Induced Velocity Z"),
-            "gamma": (gamma_lst, r"$\Gamma$", "Gamma"),
-            "alpha": (alpha_lst, r"$\alpha$", "AoA"),
-            "phi": (phi_lst, r"$\phi$", "Inflow angle"),
-            "V_x": (V_x, "V_x [m/s]", "Total Velocity X"),
-            "V_y": (V_y, "V_y [m/s]", "Total Velocity Y"),
-            "V_z": (V_z, "V_z [m/s]", "Total Velocity Z"),
-            "y_lst":y_lst
-        }
-        with open("LLM_data.pkl", "wb") as f:
-            pickle.dump(save_data, f)
+
         for ax, (data, ylabel, title) in zip(axes.flat, plots):
-            ax.plot(y_lst[:self.n_elem], data[:self.n_elem])
+            ax.plot(perf_dict["y"][:self.n_elem], data[:self.n_elem])
             ax.set_xlabel('Span y [m]')
             ax.set_ylabel(ylabel)
             ax.set_title(title)
@@ -284,8 +280,6 @@ class Rotor:
 
         for ax in axes.flat[len(plots):]:
             ax.set_visible(False)
-
-        # plt.tight_layout()
         plt.show()
             
 
@@ -296,7 +290,6 @@ if __name__ == "__main__":
     twst_func:Callable = lambda r_R : -50*r_R+35
     R = 200
     wing_c_R_func:Callable = lambda r_R: np.ones(shape=r_R.shape)/10 #=1
-    # wing_c_R_func:Callable = lambda r_R: np.ones(shape=r_R.shape) -0.4*r_R
     wing_twst_func:Callable = lambda r_R : r_R*0
     # wing = Rotor(B=1,
     #               R=R,
@@ -324,10 +317,14 @@ if __name__ == "__main__":
                   Omega = 225,
                   Vinf=Vinf,
                   rho=1.067,
-                  n_elem=5,
-                  dist_elem="uniform")
+                  n_elem=10,
+                  dist_elem="uniform",
+                  periods = 1,
+                  n_elems_per_wake=10
+                  )
 
     
     rotor.plot_blade()
-    rotor.solve(tol = 0.01,step_size=0.06)
+    rotor.solve(tol = 1e-6,step_size=0.001,max_iter =10000)
     rotor.plot_performance()
+    rotor.save_performance()

@@ -1,36 +1,37 @@
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import numpy as np
 bem_data = pd.read_csv("data/BEM_data_1.2.csv")
 with open("data/LLM_data.pkl", "rb") as f:
     LLM_data = pickle.load(f)
 
-import matplotlib.pyplot as plt
+n_elem = 10
+for i in range(6):
+    start = i*n_elem
+    end = (i+1)*n_elem
+    plt.plot(LLM_data["y"][start:end],LLM_data["Cl"][start:end],label = f"blade {i}")
+plt.ylabel("Cl")
+plt.xlabel("y[m]")
+plt.legend()
+plt.show()
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
-import matplotlib.pyplot as plt
-import numpy as np
+axes[0].plot(bem_data["r_R"]*0.7, bem_data["alpha"])
+axes[0].plot(LLM_data["y"][0:n_elem], LLM_data["alpha"][0:n_elem])
+axes[0].set_title("Alpha")
 
-n_elems = 6  # assumes (cases, elements)
-y = np.array(LLM_data["y_lst"])
+axes[1].plot(bem_data["r_R"]*0.7, bem_data["phi"])
+axes[1].plot(LLM_data["y"][0:n_elem], LLM_data["phi"][0:n_elem])
+axes[1].set_title("Phi")
 
-alpha = np.array(LLM_data["alpha"][0])
-Cl    = np.array(LLM_data["Cl"][0])
-Cd    = np.array(LLM_data["Cd"][0])
-phi   = np.array(LLM_data["phi"][0])
+axes[2].plot(bem_data["r_R"]*0.7, bem_data["Cl"])
+axes[2].plot(LLM_data["y"][0:n_elem], LLM_data["Cl"][0:n_elem])
+axes[2].set_title("Cl")
 
-
-fig, axs = plt.subplots(2, 2, figsize=(11, 8))
-
-
-for i in range(n_elems):
-    axs[0, 0].plot(y[i*n_elems:(i+1)*n_elems], alpha[i*n_elems:(i+1)*n_elems], label=f"elem {i+1}")
-
-axs[0, 0].set_title("Angle of Attack")
-axs[0, 0].grid()
-axs[0, 0].legend()
-
-
+for ax in axes:
+    ax.legend(["BEM", "LLM"])
+    ax.set_xlabel("r/R")
 
 plt.tight_layout()
 plt.show()

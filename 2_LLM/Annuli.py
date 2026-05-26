@@ -13,13 +13,16 @@ class Annuli:
                  chord:float,
                  beta: float,
                  Vinf:np.ndarray,
+                 rho: float,
                  Omega:float,
                  tv_inner:LiftingLine,
                  tv_outer:LiftingLine,
                  bv:LiftingLine ,
                  cp_x:float,
                  cp_y:float,
-                 cp_z:float):
+                 cp_z:float,
+                 n_elems_per_wake:int=10,
+                 periods: int=1):
         self.polar_path = polar_path
         self.r = r
         self.beta = beta
@@ -30,12 +33,14 @@ class Annuli:
         self.is_prop = True
 
         self.Vinf = Vinf
+        self.rho = rho
         self.Omega = Omega
         self.phi=0
         self.alpha=0
 
 
         self.V_i = np.zeros(3)
+        self.gamma = 0
         # lifting lines
         self.tv_inner:LiftingLine = tv_inner
         self.tv_outer:LiftingLine = tv_outer
@@ -44,20 +49,20 @@ class Annuli:
         self.wake:LiftingLine = []
         if Omega == 0:
             n_wake = 1
-            period  = 3/self.Vinf[0]
+            interval  = 3/self.Vinf[0]
         else:
-            n_wake = 10
-            period = 2*np.pi/self.Omega
+            n_wake = n_elems_per_wake*periods
+            interval = periods*2*np.pi/self.Omega
 
         inner_wake_position = self.tv_inner.p1
         outer_wake_position = self.tv_outer.p2
-        angles = np.linspace(0,-2*np.pi,n_wake+1).reshape((n_wake+1,1))
+        angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
         rotations = Rotation.from_euler('x', angles,degrees=False)  
         
         inner_rotated_positions = rotations.apply(inner_wake_position)  
         outer_rotated_positions = rotations.apply(outer_wake_position)
         
-        axial_offsets = np.linspace(np.zeros(3), self.Vinf*period,n_wake+1)
+        axial_offsets = np.linspace(np.zeros(3), self.Vinf*interval,n_wake+1)
         
         self.inner_wake_points = inner_rotated_positions+axial_offsets
         self.inner_wake_lines:List[LiftingLine] = []
@@ -107,31 +112,27 @@ class Annuli:
                              self.polar_data["Cd"])
 
     def calculate_performance(self, 
-                              V_i:np.ndarray,
-                              rho:float):
+                              V_i:np.ndarray
+                              ):
         if np.any(np.isnan(V_i)):
             V_i = np.zeros(3)
         V_omega = -self.n_azim * self.Omega*self.r
         self.V = self.Vinf+V_i+V_omega
         V_norm = np.linalg.norm(self.V)
 
-        # print(V)
         if self.V[2] == 0:
             self.phi = 90    
         else:
             self.phi=np.rad2deg(np.atan2(self.V[0],self.V[2]))
-        # print(f"phi = {phi}")
         if self.is_prop:
             self.alpha = self.beta-self.phi
         else:
             self.alpha = self.phi-self.beta
 
-        # print(alpha)
-        # print(f"alpha = {alpha:.2f}")
         Cl = self.calculate_Cl(self.alpha)
         Cd = self.calculate_Cd(self.alpha)
-        lift = 0.5*self.chord*rho*V_norm**2*Cl
-        drag = 0.5*self.chord*rho*V_norm**2*Cd
+        lift = 0.5*self.chord*self.rho*V_norm**2*Cl
+        drag = 0.5*self.chord*self.rho*V_norm**2*Cd
 
         phi_rad = np.deg2rad(self.phi)
         if self.is_prop:
@@ -142,14 +143,8 @@ class Annuli:
             F_axial = lift*np.cos(phi_rad)-drag*np.sin(phi_rad)
 
         gamma = 0.5*self.chord*V_norm*Cl
+        self.gamma = gamma
         return gamma,F_azim,F_axial,Cl,Cd
-        # n_phi = Rotation.from_euler("z",phi,degrees=True).apply(self.n_axial)
-        # print(n_phi)
-        # local_coefficients = np.array([Cl,Cd,0])
-        # global_coefficients = local_coefficients * n_phi
-        # print(global_coefficients)
-        # print(f"Cl = {Cl:.2f}")
-        # print(f"Cd = {Cd:.2f}")
     def _load_polar_data(self, polar_path:Path|str) -> Dict[str, np.ndarray]:
         """Function to read the polar data"""
 
