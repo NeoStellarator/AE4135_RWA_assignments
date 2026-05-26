@@ -325,6 +325,6 @@ if __name__ == "__main__":
 
     
     rotor.plot_blade()
-    rotor.solve(tol = 1e-6,step_size=0.001,max_iter =10000)
+    rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
     rotor.plot_performance()
     rotor.save_performance()

@@ -26,8 +26,11 @@ class Annuli:
         self.polar_path = polar_path
         self.r = r
         self.beta = beta
-        self.n_azim = np.array([0,0,-1])
         self.n_axial = np.array([1,0,0])
+        self.n_azim = np.array([0,0,-1])
+        self.n_azim = np.cross(bv.p2-bv.p1, self.n_axial)
+        self.n_azim = self.n_azim/np.linalg.norm(self.n_azim)
+        
         self.n_tan = Rotation.from_euler("y",beta,degrees=True).apply(self.n_azim)
         self.chord = chord
         self.is_prop = True
@@ -120,10 +123,14 @@ class Annuli:
         self.V = self.Vinf+V_i+V_omega
         V_norm = np.linalg.norm(self.V)
 
-        if self.V[2] == 0:
-            self.phi = 90    
-        else:
-            self.phi=np.rad2deg(np.atan2(self.V[0],self.V[2]))
+        # if self.V[2] == 0:
+        #     self.phi = 90    
+        # else:
+        V_axial = np.dot(self.V, self.n_axial)
+        V_azim = np.dot(self.V, self.n_azim)
+
+        self.phi = np.rad2deg(np.arctan2(V_axial, -V_azim))
+        # self.phi = np.rad2deg(np.arctan2(self.V[0], self.V[2]))
         if self.is_prop:
             self.alpha = self.beta-self.phi
         else:
