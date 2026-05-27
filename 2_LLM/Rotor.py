@@ -182,7 +182,7 @@ class Rotor:
             perf_dict["y"].append(ann_i.r)
             perf_dict["gamma"].append(gamma)
             perf_dict["alpha"].append(ann_i.alpha)
-            perf_dict["phi"].append(ann_i.alpha)
+            perf_dict["phi"].append(ann_i.phi)
         return perf_dict
     def calculate_integral_performance(self):
         perf_dict=self.calculate_spanwise_performance()
@@ -317,7 +317,7 @@ if __name__ == "__main__":
                   Omega = 225,
                   Vinf=Vinf,
                   rho=1.067,
-                  n_elem=10,
+                  n_elem=40,
                   dist_elem="uniform",
                   periods = 1,
                   n_elems_per_wake=10

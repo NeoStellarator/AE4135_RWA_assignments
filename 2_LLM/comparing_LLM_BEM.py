@@ -6,7 +6,7 @@ bem_data = pd.read_csv("data/BEM_data_1.2.csv")
 with open("data/LLM_data.pkl", "rb") as f:
     LLM_data = pickle.load(f)
 
-n_elem = 10
+n_elem = 20
 for i in range(6):
     start = i*n_elem
     end = (i+1)*n_elem
