@@ -11,25 +11,20 @@ class Annuli:
     def __init__(self, polar_path:Path|str,
                  r:float,
                  chord:float,
+                 axial_rot_matrix:float,
                  beta: float,
                  Vinf:np.ndarray,
                  rho: float,
                  Omega:float,
-                 tv_inner:LiftingLine,
-                 tv_outer:LiftingLine,
-                 bv:LiftingLine ,
-                 cp_x:float,
-                 cp_y:float,
-                 cp_z:float,
-                 n_elems_per_wake:int=10,
-                 periods: int=1):
+                 ):
         self.polar_path = polar_path
         self.r = r
         self.beta = beta
         self.n_axial = np.array([1,0,0])
-        self.n_azim = np.array([0,0,-1])
-        self.n_azim = np.cross(bv.p2-bv.p1, self.n_axial)
-        self.n_azim = self.n_azim/np.linalg.norm(self.n_azim)
+        self.n_azim = axial_rot_matrix@np.array([0,0,-1])
+        
+        # self.n_azim = np.cross(bv.p2-bv.p1, self.n_axial)
+        # self.n_azim = self.n_azim/np.linalg.norm(self.n_azim)
         
         self.n_tan = Rotation.from_euler("y",beta,degrees=True).apply(self.n_azim)
         self.chord = chord
@@ -45,50 +40,50 @@ class Annuli:
         self.V_i = np.zeros(3)
         self.gamma = 0
         # lifting lines
-        self.tv_inner:LiftingLine = tv_inner
-        self.tv_outer:LiftingLine = tv_outer
+        # self.tv_inner:LiftingLine = tv_inner
+        # self.tv_outer:LiftingLine = tv_outer
         
         # Wake
-        self.wake:LiftingLine = []
-        if Omega == 0:
-            n_wake = 1
-            interval  = 3/self.Vinf[0]
-        else:
-            n_wake = n_elems_per_wake*periods
-            interval = periods*2*np.pi/self.Omega
+        # self.wake:LiftingLine = []
+        # if Omega == 0:
+        #     n_wake = 1
+        #     interval  = 3/self.Vinf[0]
+        # else:
+        #     n_wake = n_elems_per_wake*periods
+        #     interval = periods*2*np.pi/self.Omega
 
-        inner_wake_position = self.tv_inner.p1
-        outer_wake_position = self.tv_outer.p2
-        angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
-        rotations = Rotation.from_euler('x', angles,degrees=False)  
+        # inner_wake_position = self.tv_inner.p1
+        # outer_wake_position = self.tv_outer.p2
+        # angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
+        # rotations = Rotation.from_euler('x', angles,degrees=False)  
         
-        inner_rotated_positions = rotations.apply(inner_wake_position)  
-        outer_rotated_positions = rotations.apply(outer_wake_position)
+        # inner_rotated_positions = rotations.apply(inner_wake_position)  
+        # outer_rotated_positions = rotations.apply(outer_wake_position)
         
-        axial_offsets = np.linspace(np.zeros(3), self.Vinf*interval,n_wake+1)
+        # axial_offsets = np.linspace(np.zeros(3), self.Vinf*interval,n_wake+1)
         
-        self.inner_wake_points = inner_rotated_positions+axial_offsets
-        self.inner_wake_lines:List[LiftingLine] = []
+        # self.inner_wake_points = inner_rotated_positions+axial_offsets
+        # self.inner_wake_lines:List[LiftingLine] = []
 
-        self.outer_wake_points = outer_rotated_positions+axial_offsets
-        self.outer_wake_lines:List[LiftingLine] = []
+        # self.outer_wake_points = outer_rotated_positions+axial_offsets
+        # self.outer_wake_lines:List[LiftingLine] = []
 
-        for i in range(n_wake):
-            end_inner = self.inner_wake_points[i]
-            start_inner = self.inner_wake_points[i+1]
-            ll_inner = LiftingLine(start_inner[0],start_inner[1],start_inner[2],end_inner[0],end_inner[1],end_inner[2])
-            self.inner_wake_lines.append(ll_inner)
+        # for i in range(n_wake):
+        #     end_inner = self.inner_wake_points[i]
+        #     start_inner = self.inner_wake_points[i+1]
+        #     ll_inner = LiftingLine(start_inner[0],start_inner[1],start_inner[2],end_inner[0],end_inner[1],end_inner[2])
+        #     self.inner_wake_lines.append(ll_inner)
 
-            start_outer = self.outer_wake_points[i]
-            end_outer = self.outer_wake_points[i+1]
-            ll_outer = LiftingLine(start_outer[0],start_outer[1],start_outer[2],end_outer[0],end_outer[1],end_outer[2])
-            self.outer_wake_lines.append(ll_outer)
+        #     start_outer = self.outer_wake_points[i]
+        #     end_outer = self.outer_wake_points[i+1]
+        #     ll_outer = LiftingLine(start_outer[0],start_outer[1],start_outer[2],end_outer[0],end_outer[1],end_outer[2])
+        #     self.outer_wake_lines.append(ll_outer)
 
 
-        self.bv:LiftingLine = bv
-        self.cp_x = cp_x
-        self.cp_y = cp_y
-        self.cp_z = cp_z
+        # self.bv:LiftingLine = bv
+        # self.cp_x = cp_x
+        # self.cp_y = cp_y
+        # self.cp_z = cp_z
         # read & store polar data
         self.polar_data = self._load_polar_data(polar_path)
     
@@ -148,7 +143,8 @@ class Annuli:
         else:
             F_azim = lift*np.sin(phi_rad)+drag*np.cos(phi_rad)
             F_axial = lift*np.cos(phi_rad)-drag*np.sin(phi_rad)
-
+        self.F_azim = F_azim
+        self.F_axial = F_axial
         gamma = 0.5*self.chord*V_norm*Cl
         self.gamma = gamma
         return gamma,F_azim,F_axial,Cl,Cd

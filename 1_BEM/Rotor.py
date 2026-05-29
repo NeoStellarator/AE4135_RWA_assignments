@@ -294,7 +294,7 @@ if __name__ == "__main__":
     rotor.export_hist(res_dir.joinpath('propeller_CT_history.csv'), vname='CT')
 
     # rotor.print_geometry()
-    # print(rotor.calculate_integral())
+    rotor.export_total(target_row = 1,file_path=data_dir.joinpath('total_data.csv'))
     rotor.export_dist(data_dir.joinpath('propeller_radial_data.csv'))
     rotor.plot_check()
     # rotor.export("propeller_radial_data.csv")
