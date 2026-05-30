@@ -138,15 +138,20 @@ class Annuli:
 
         phi_rad = np.deg2rad(self.phi)
         if self.is_prop:
-            Cy = Cl *np.sin(phi_rad)-Cd*np.cos(phi_rad)
+            Cy = Cl*np.sin(phi_rad)-Cd*np.cos(phi_rad)
             Cx = Cl*np.cos(phi_rad)+Cd*np.sin(phi_rad)
         else:
             Cy = Cl*np.sin(phi_rad)+Cd*np.cos(phi_rad)
             Cx = Cl*np.cos(phi_rad)-Cd*np.sin(phi_rad)
 
+        # computing induction factors
+        a     = V_axial/np.linalg.norm(self.Vinf) - 1
+        aline = 1-V_axial/(self.Omega*self.r)
+
         gamma = 0.5*self.chord*V_norm*Cl
         self.gamma = gamma
-        return gamma,Cy,Cx,Cl,Cd
+        return gamma,Cy,Cx,Cl,Cd,a,aline
+    
     def _load_polar_data(self, polar_path:Path|str) -> Dict[str, np.ndarray]:
         """Function to read the polar data"""
 
