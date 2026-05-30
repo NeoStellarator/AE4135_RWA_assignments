@@ -136,9 +136,7 @@ def generate_induction_matrix(dist_elem, r_trailing,c_trailing,beta_trailing,r_b
                 p2_lst[i, 0] = r00*x2 + r01*y2 + r02*z2
                 p2_lst[i, 1] = r10*x2 + r11*y2 + r12*z2
                 p2_lst[i, 2] = r20*x2 + r21*y2 + r22*z2
-            # cp_lst = np.array([blade_rot@np.array([cp_x_lst[i],cp_y_lst[i],cp_z_lst[i]])for i in range(len(cp_z_lst))])
-            # p1_lst = np.array([blade_rot@np.array([x1_lst[i],y1_lst[i],z1_lst[i]])for i in range(len(x1_lst))])
-            # p2_lst = np.array([blade_rot@np.array([x2_lst[i],y2_lst[i],z2_lst[i]])for i in range(len(x1_lst))])
+            
             p1_total_lst[rot_i*n_lines_per_blade:(rot_i+1)*n_lines_per_blade]=p1_lst
             p2_total_lst[rot_i*n_lines_per_blade:(rot_i+1)*n_lines_per_blade]=p2_lst
             cp_total_lst[rot_i*n_cp_per_blade:(rot_i+1)*n_cp_per_blade]=cp_lst
@@ -159,9 +157,6 @@ def generate_induction_matrix(dist_elem, r_trailing,c_trailing,beta_trailing,r_b
                 p2y= p2_total_lst[i_line,1]
                 p2z= p2_total_lst[i_line,2]
                 m_ind[i,i_line]+=calculate_induced_velocity(p1x,p1y,p1z,p2x,p2y,p2z,x,y,z,gamma)
-        # print(m_ind.shape)
-        # p1_total_lst = np.array([np.array([x1_lst[i],y1_lst[i],z1_lst[i]])for i in range(len(x1_lst))])
-        # p2_total_lst = np.array([np.array([x2_lst[i],y2_lst[i],z2_lst[i]])for i in range(len(x1_lst))])
         return m_ind, p1_total_lst,p2_total_lst
 @jit(nopython=True)
 def convert_gamma_vector(gamma_vector,n_line,n_wake,n_blade):
@@ -176,16 +171,6 @@ def convert_gamma_vector(gamma_vector,n_line,n_wake,n_blade):
         m_gamma[i*len(ordered_gamma_blade):(i+1)*len(ordered_gamma_blade)]=ordered_gamma_blade
     return m_gamma
 
-    # m_gamma = np.zeros(n_line*n_blade)
-    # m_gamma_blade = np.zeros(n_line)
-    # m_gamma_blade[0:3*len(gamma_vector)]=np.concatenate((gamma_vector,gamma_vector,gamma_vector))
-    # n_ann = len(gamma_vector)
-    # offset=3*len(gamma_vector)
-    # for i in range(n_ann):
-    #     m_gamma_blade[offset+i*n_wake*2:offset+(i+1)*n_wake*2]=np.ones(n_wake*2)*gamma_vector[i]
-    # # for i in range(n_blade):
-    # #     m_gamma[i*n_line:(i+1)*n_line]=m_gamma_blade
-    return m_gamma
 @jit(nopython=True)
 def order_gamma(gamma_blade,n_lines_per_blade,n_wake):
     m_gamma_blade = np.zeros(n_lines_per_blade)
