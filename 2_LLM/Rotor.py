@@ -75,83 +75,16 @@ class Rotor:
         angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
         wake_rotations = Rotation.from_euler('x', angles,degrees=False).as_matrix()
         axial_offsets = np.linspace(np.zeros(3), self.Vinf*interval,n_wake+1)
-            # tv_inner_x1_lst = 5/4*c_trailing[:-1]*np.sin(beta_trailing[:-1])
-            # tv_inner_y1_lst = r_trailing[:-1]
-            # tv_inner_z1_lst = 5/4*c_trailing[:-1]*np.cos(beta_trailing[:-1])
-                
-            # tv_inner_x2_lst = c_trailing[:-1]/4*np.sin(beta_trailing[:-1])
-            # tv_inner_y2_lst = r_trailing[:-1]
-            # tv_inner_z2_lst = c_trailing[:-1]/4*np.cos(beta_trailing[:-1])
-
-            # tv_outer_x1_lst = c_trailing[1:]/4*np.sin(beta_trailing[1:])
-            # tv_outer_y1_lst = r_trailing[1:]
-            # tv_outer_z1_lst = c_trailing[1:]/4*np.cos(beta_trailing[1:])
-
-            # tv_outer_x2_lst = 5/4*c_trailing[1:]*np.sin(beta_trailing[1:])
-            # tv_outer_y2_lst = r_trailing[1:]
-            # tv_outer_z2_lst = 5/4*c_trailing[1:]*np.cos(beta_trailing[1:])
-            
-            # cp_x_lst = 3/4*self.c_bound*np.sin(beta_bound)
-            # cp_y_lst = r_bound
-            # cp_z_lst = 3/4*self.c_bound*np.cos(beta_bound)
-
-
-        # for blade in range(self.B):
-        #     blade_angle = 2 * np.pi / self.B * blade
-        #     rot = Rotation.from_euler("x", blade_angle)
-
-        #     for idx in range(len(r_bound)):
-        #         # Generating trailing vortices
-        #         tv_inner_x1 = 5/4*c_trailing[idx]*np.sin(beta_trailing[idx])
-        #         tv_inner_y1 = r_trailing[idx]
-        #         tv_inner_z1 = 5/4*c_trailing[idx]*np.cos(beta_trailing[idx])
-                
-        #         tv_inner_x2 = c_trailing[idx]/4*np.sin(beta_trailing[idx])
-        #         tv_inner_y2 = r_trailing[idx]
-        #         tv_inner_z2 = c_trailing[idx]/4*np.cos(beta_trailing[idx])
-
-        #         p_inner1 = rot.apply([tv_inner_x1, tv_inner_y1, tv_inner_z1])
-        #         p_inner2 = rot.apply([tv_inner_x2, tv_inner_y2, tv_inner_z2])
-        #         tv_inner = LiftingLine(*p_inner1, *p_inner2)
-
-                
-        #         tv_outer_x1 = c_trailing[idx+1]/4*np.sin(beta_trailing[idx+1])
-        #         tv_outer_y1 = r_trailing[idx+1]
-        #         tv_outer_z1 = c_trailing[idx+1]/4*np.cos(beta_trailing[idx+1])
-
-        #         tv_outer_x2 = 5/4*c_trailing[idx+1]*np.sin(beta_trailing[idx+1])
-        #         tv_outer_y2 = r_trailing[idx+1]
-        #         tv_outer_z2 = 5/4*c_trailing[idx+1]*np.cos(beta_trailing[idx+1])
-
-        #         p_outer1 = rot.apply([tv_outer_x1, tv_outer_y1, tv_outer_z1])
-        #         p_outer2 = rot.apply([tv_outer_x2, tv_outer_y2, tv_outer_z2])
-        #         tv_outer = LiftingLine(*p_outer1, *p_outer2)
-
-                # # generating bound vortex
-                # p_bv1 = p_inner2
-                # p_bv2 = p_outer1
-                # bv = LiftingLine(*p_bv1, *p_bv2)
-
-                # cp = rot.apply([3/4*self.c_bound[idx]*np.sin(beta_bound[idx]),
-                #                 r_bound[idx],
-                #                 3/4*self.c_bound[idx]*np.cos(beta_bound[idx])])
-
-                # ann = Annuli(polar_path=polar_path, r=r_bound[idx], chord=self.c_bound[idx],
-                #             beta=np.rad2deg(beta_bound[idx]), Vinf=Vinf,rho=self.rho, Omega=Omega,
-                #             tv_inner=tv_inner, tv_outer=tv_outer, bv=bv,
-                #             cp_x=cp[0], cp_y=cp[1], cp_z=cp[2],periods = periods,n_elems_per_wake=n_elems_per_wake)
-                # self.annuli.append(ann)
         blade_angles =np.linspace(0,2*np.pi,self.B,endpoint=False)
         blade_rotations= [Rotation.from_euler("x", blade_angle).as_matrix() for blade_angle in blade_angles]
         for axial_rot in blade_angles:
-            print(axial_rot)
             axial_rot_matrix = Rotation.from_euler("x", axial_rot).as_matrix()
             for i in range(len(r_bound)):
                 ann = Annuli(polar_path=polar_path, r=r_bound[i], chord=c_bound[i],axial_rot_matrix=axial_rot_matrix,
                             beta=np.rad2deg(beta_bound[i]), Vinf=Vinf,rho=self.rho, Omega=Omega)
                 self.annuli.append(ann)
         self.m_induced,self.p1_lst,self.p2_lst = generate_induction_matrix(dist_elem=dist_elem,r_trailing=r_trailing,c_trailing=c_trailing,beta_trailing=beta_trailing,r_bound=r_bound,c_bound=self.c_bound,beta_bound=beta_bound,wake_rotations=wake_rotations,axial_offsets=axial_offsets,blade_rotations=blade_rotations)
-        print("Generated induction matrix!!")
+        # print("Generated induction matrix!!")
 
 
 
@@ -187,20 +120,17 @@ class Rotor:
         for i in range(n_ann):
             ann_i = self.annuli[i]
             gamma,Cy,Cx,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
-            # m_gamma[i*n_lines_per_annuli:(i+1)*n_lines_per_annuli]=gamma
             gamma_vector[i]=gamma
         m_gamma = convert_gamma_vector(gamma_vector,n_line,self.n_elems_per_wake,self.B)
         return m_gamma
  
     def calculate_induced_velocities(self):
         m_gamma = self.generate_gamma_matrix()
-        print(f"m_induced shape: {self.m_induced.shape}")
-        print(f"m_gamma shape: {m_gamma.shape}")
-        u_ind = self.m_induced[..., 0] @ m_gamma  # (n, m) @ (m,) → (n,)
-        v_ind = self.m_induced[..., 1] @ m_gamma  # (n, m) @ (m,) → (n,)
-        w_ind = self.m_induced[..., 2] @ m_gamma  # (n, m) @ (m,) → (n,)
+        u_ind = self.m_induced[..., 0] @ m_gamma  
+        v_ind = self.m_induced[..., 1] @ m_gamma
+        w_ind = self.m_induced[..., 2] @ m_gamma
 
-        result = np.stack([u_ind, v_ind, w_ind], axis=-1)  # → (n, 3)
+        result = np.stack([u_ind, v_ind, w_ind], axis=-1) 
         return result
     def calculate_spanwise_performance(self):
         perf_dict = {
@@ -242,7 +172,7 @@ class Rotor:
             V_i_new = self.calculate_induced_velocities()
             for i in range(len(V_i_new)):
                 self.annuli[i].V_i = (V_i_new[i]*step_size+V_i_old[i]*(1-step_size))
-            print(f"iteration {iteration} with max error: {np.max(np.abs(V_i_new - V_i_old))}")
+            # print(f"iteration {iteration} with max error: {np.max(np.abs(V_i_new - V_i_old))}")
             max_error = np.max(np.abs(V_i_new - V_i_old))
             if max_error<last_max_error:
                 step_size*=1.1
@@ -292,15 +222,7 @@ class Rotor:
                 p2[1] - p1[1],
                 p2[2] - p1[2],
                 color=color, arrow_length_ratio=0.05)
-        # for ann in self.annuli:
-        #     ann.tv_inner.plot_on_ax(ax)
-        #     ann.tv_outer.plot_on_ax(ax)
-        #     ann.bv.plot_on_ax(ax)
-        #     ax.scatter(ann.cp_x, ann.cp_y, ann.cp_z, color='red')
-        #     for wake_ll in ann.inner_wake_lines:
-        #         wake_ll.plot_on_ax(ax)
-        #     for wake_ll in ann.outer_wake_lines:
-        #         wake_ll.plot_on_ax(ax)
+
         def set_equal_aspect_3d(ax):
             limits = np.array([ax.get_xlim3d(), ax.get_ylim3d(), ax.get_zlim3d()])
             center = limits.mean(axis=1)
@@ -423,14 +345,14 @@ if __name__ == "__main__":
                   Omega = Ome,
                   Vinf=Vinf,
                   rho=1.067,
-                  n_elem=40,
+                  n_elem=10,
                   dist_elem="uniform",
                   periods = 1,
-                  n_elems_per_wake=10
+                  n_elems_per_wake=5
                   )
 
     
-    # rotor.plot_blade()
+    rotor.plot_blade()
     rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
     # rotor.export_dist(data_dir.joinpath("LLM_distribution.csv"))
     rotor.plot_performance()
