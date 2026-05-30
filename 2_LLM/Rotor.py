@@ -9,7 +9,7 @@ import pickle
 
 from LiftingLine import LiftingLine
 from Annuli import Annuli
-from globals import main_dir,data_dir
+from globals import main_dir, data_dir, res_dir
 from jit_vector_math import generate_induction_matrix,convert_gamma_vector
 
 class Rotor:
@@ -110,6 +110,7 @@ class Rotor:
                     m_ind[i,j]=ann_j.outer_wake_lines[i_wake].calculate_induced_velocity(ann_i.cp_x,ann_i.cp_y,ann_i.cp_z,gamma)
                     j+=1
         return m_ind
+    
     def generate_gamma_matrix(self):
         n_ann = len(self.annuli)
         n_lines_per_annuli = self.periods*self.n_elems_per_wake*2+3
@@ -119,7 +120,8 @@ class Rotor:
         gamma_vector = np.zeros(n_ann)
         for i in range(n_ann):
             ann_i = self.annuli[i]
-            gamma,Cy,Cx,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
+            gamma,Cy,Cx,Cl,Cd,a,aline = ann_i.calculate_performance(ann_i.V_i)
+            # m_gamma[i*n_lines_per_annuli:(i+1)*n_lines_per_annuli]=gamma
             gamma_vector[i]=gamma
         m_gamma = convert_gamma_vector(gamma_vector,n_line,self.n_elems_per_wake,self.B)
         return m_gamma
@@ -132,6 +134,7 @@ class Rotor:
 
         result = np.stack([u_ind, v_ind, w_ind], axis=-1) 
         return result
+    
     def calculate_spanwise_performance(self):
         perf_dict = {
             "V_i":[],
@@ -144,20 +147,25 @@ class Rotor:
             "gamma": [],
             "alpha": [],
             "phi": [],
+            "a": [],
+            "aline": [],
         }
         for ann_i in self.annuli:
             
-            gamma,Cy,Cx,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
+            gamma,Cy,Cx,Cl,Cd,a,aline = ann_i.calculate_performance(ann_i.V_i)
             perf_dict["V_i"].append(ann_i.V_i)
             perf_dict["Cy"].append(Cy)
             perf_dict["Cx"].append(Cx)
             perf_dict["Cl"].append(Cl)
             perf_dict["Cd"].append(Cd)
+            perf_dict["a"].append(a)
+            perf_dict["aline"].append(aline)
             perf_dict["y"].append(ann_i.r)
             perf_dict["r_R"].append(ann_i.r / self.R)
             perf_dict["gamma"].append(gamma)
             perf_dict["alpha"].append(ann_i.alpha)
             perf_dict["phi"].append(ann_i.phi)
+
         return perf_dict
     def calculate_integral_performance(self):
         perf_dict=self.calculate_spanwise_performance()
@@ -254,6 +262,8 @@ class Rotor:
             "gamma"   : perf_dict["gamma"][:n],
             "Cy"      : perf_dict["Cy"][:n],
             "Cx"      : perf_dict["Cx"][:n],
+            "a"       : perf_dict["a"][:n],
+            "aline"   : perf_dict["aline"][:n],
             "V_i_x"   : [v[0] for v in V_i],
             "V_i_y"   : [v[1] for v in V_i],
             "V_i_z"   : [v[2] for v in V_i],
@@ -367,3 +377,4 @@ if __name__ == "__main__":
     print(f"QC = {rotor.QC}")
     print(f"eta = {rotor.eta}")
     rotor.save_performance()
+    rotor.export_dist(res_dir.joinpath('LLM_test_mfkr.csv'))
