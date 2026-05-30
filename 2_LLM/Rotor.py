@@ -9,7 +9,7 @@ import pickle
 
 from LiftingLine import LiftingLine
 from Annuli import Annuli
-from globals import main_dir,data_dir
+from globals import main_dir, data_dir, res_dir
 from jit_vector_math import generate_induction_matrix,convert_gamma_vector
 
 class Rotor:
@@ -216,6 +216,8 @@ class Rotor:
             "gamma": [],
             "alpha": [],
             "phi": [],
+            "a": [],
+            "aline": [],
         }
         for ann_i in self.annuli:
             
@@ -452,3 +454,4 @@ if __name__ == "__main__":
     print(f"QC = {rotor.QC}")
     print(f"eta = {rotor.eta}")
     rotor.save_performance()
+    rotor.export_dist(res_dir.joinpath('LLM_test_mfkr.csv'))
