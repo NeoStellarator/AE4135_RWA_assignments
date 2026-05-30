@@ -140,10 +140,16 @@ class Annuli:
         if self.is_prop:
             Cy = Cl *np.sin(phi_rad)-Cd*np.cos(phi_rad)
             Cx = Cl*np.cos(phi_rad)+Cd*np.sin(phi_rad)
+            Fazim = lift*np.sin(phi_rad)-drag*np.cos(phi_rad)
+            Faxial = lift*np.cos(phi_rad)+drag*np.sin(phi_rad)
         else:
             Cy = Cl*np.sin(phi_rad)+Cd*np.cos(phi_rad)
             Cx = Cl*np.cos(phi_rad)-Cd*np.sin(phi_rad)
-
+            Fazim = lift*np.sin(phi_rad)-drag*np.cos(phi_rad)
+            Faxial = lift*np.cos(phi_rad)+drag*np.sin(phi_rad)
+        
+        self.F_azim = Fazim
+        self.F_axial = Faxial
         gamma = 0.5*self.chord*V_norm*Cl
         self.gamma = gamma
         return gamma,Cy,Cx,Cl,Cd
@@ -166,7 +172,9 @@ if __name__ == "__main__":
     Vinf = np.array([1,0,0])
     V_i = np.array([0,0,0])
     Omega = 1
-    gamma,F_azim,F_axial=ann.calculate_performance(V_i=V_i,Vinf=Vinf,Omega = Omega,rho=1.225)
+    gamma,Cy,Cx,Fazim,Faxial,Cl,Cd = ann.calculate_performance(V_i=V_i,Vinf=Vinf,Omega = Omega,rho=1.225)
     print(f"gamma = {gamma:.2f}")
-    print(f"F_azim = {F_azim:.2f}")
-    print(f"F_axial = {F_axial:.2f}")
+    print(f"Cy = {Cy:.2f}")
+    print(f"Cx = {Cx:.2f}")
+    print(f"Fazim = {Fazim:.2f}")
+    print(f"Faxial = {Faxial:.2f}")
