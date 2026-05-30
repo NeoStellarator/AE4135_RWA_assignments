@@ -25,6 +25,7 @@ class Rotor:
         # Operating condition
         Omega :float,
         Vinf : np.ndarray,
+        a_wake : np.ndarray,
         rho : float,
         # Other parameters
         n_elem:int=100,
@@ -46,6 +47,7 @@ class Rotor:
 
         # Operating Conditions                 
         self.Vinf = Vinf
+        self.a_wake=a_wake
         self.Omega  = Omega
         self.rho  = rho
 
@@ -74,7 +76,7 @@ class Rotor:
         interval = periods*2*np.pi/self.Omega
         angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
         wake_rotations = Rotation.from_euler('x', angles,degrees=False).as_matrix()
-        axial_offsets = np.linspace(np.zeros(3), self.Vinf*interval,n_wake+1)
+        axial_offsets = np.linspace(np.zeros(3), self.Vinf*(1-a_wake)*interval,n_wake+1)
         blade_angles =np.linspace(0,2*np.pi,self.B,endpoint=False)
         blade_rotations= [Rotation.from_euler("x", blade_angle).as_matrix() for blade_angle in blade_angles]
         for axial_rot in blade_angles:
@@ -354,11 +356,12 @@ if __name__ == "__main__":
                   polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
                   Omega = Ome,
                   Vinf=Vinf,
+                  a_wake=0.5,
                   rho=1.067,
                   n_elem=10,
                   dist_elem="uniform",
                   periods = 1,
-                  n_elems_per_wake=5
+                  n_elems_per_wake=10
                   )
 
     
