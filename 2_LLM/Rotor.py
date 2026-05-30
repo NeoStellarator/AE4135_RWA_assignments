@@ -70,6 +70,8 @@ class Rotor:
             self.c_bound = c_R_func(r_R_bound)*self.R # used later
             c_bound = self.c_bound
             beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
+        else:
+            raise NotImplementedError("Only uniform spacing is implemented!")
         n_wake = n_elems_per_wake*periods
         interval = periods*2*np.pi/self.Omega
         angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
@@ -286,7 +288,22 @@ class Rotor:
         self.CQ  = self.Q/(self.rho*n**2*(self.R*2)**5)
         self.QC  = self.Q/(self.rho*V_inf_mag**2*(self.R*2)**3)
         self.eta = self.TC/self.PC
-                
+        self.iteration = iteration
+    
+
+    def make_summary(self):
+
+        return dict(
+            CT=self.CT,
+            TC=self.TC,
+            CP=self.CP,
+            PC=self.PC,
+            CQ=self.CQ,
+            QC=self.QC,
+            eta=self.eta,
+            it=self.iteration,
+        )
+    
     def plot_blade(self):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
