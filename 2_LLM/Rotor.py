@@ -59,17 +59,24 @@ class Rotor:
         
         if dist_elem == "uniform":
             r_R_trailing = np.linspace(r_R_H, 1, n_elem+1)
-            r_trailing = r_R_trailing*self.R
+        elif dist_elem == "cosine":
+            r_R_trailing = (1 - np.cos(np.linspace(0, np.pi, n_elem+1)))/2 * (1-r_R_H) + r_R_H
+        else:
+            raise ValueError("dist_elem must be either 'uniform' or 'cosine'")
 
-            c_trailing = c_R_func(r_R_trailing)*self.R
-            beta_trailing = np.deg2rad(self.pitch+twst_func(r_R_trailing))
+        r_trailing = r_R_trailing*self.R
 
-            r_R_bound = (r_R_trailing[1:]+r_R_trailing[:-1])/2
-            r_bound = r_R_bound*self.R
+        c_trailing = c_R_func(r_R_trailing)*self.R
+        beta_trailing = np.deg2rad(self.pitch+twst_func(r_R_trailing))
 
-            self.c_bound = c_R_func(r_R_bound)*self.R # used later
-            c_bound = self.c_bound
-            beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
+        r_R_bound = (r_R_trailing[1:]+r_R_trailing[:-1])/2
+        r_bound = r_R_bound*self.R
+
+        self.c_bound = c_R_func(r_R_bound)*self.R # used later
+        c_bound = self.c_bound
+        beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
+        
+
         n_wake = n_elems_per_wake*periods
         interval = periods*2*np.pi/self.Omega
         angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
@@ -83,7 +90,7 @@ class Rotor:
                 ann = Annuli(polar_path=polar_path, r=r_bound[i], chord=c_bound[i],axial_rot_matrix=axial_rot_matrix,
                             beta=np.rad2deg(beta_bound[i]), Vinf=Vinf,rho=self.rho, Omega=Omega)
                 self.annuli.append(ann)
-        self.m_induced,self.p1_lst,self.p2_lst = generate_induction_matrix(dist_elem=dist_elem,r_trailing=r_trailing,c_trailing=c_trailing,beta_trailing=beta_trailing,r_bound=r_bound,c_bound=self.c_bound,beta_bound=beta_bound,wake_rotations=wake_rotations,axial_offsets=axial_offsets,blade_rotations=blade_rotations)
+        self.m_induced,self.p1_lst,self.p2_lst = generate_induction_matrix(r_trailing=r_trailing,c_trailing=c_trailing,beta_trailing=beta_trailing,r_bound=r_bound,c_bound=self.c_bound,beta_bound=beta_bound,wake_rotations=wake_rotations,axial_offsets=axial_offsets,blade_rotations=blade_rotations)
         # print("Generated induction matrix!!")
 
 
@@ -356,7 +363,7 @@ if __name__ == "__main__":
                   Vinf=Vinf,
                   rho=1.067,
                   n_elem=10,
-                  dist_elem="uniform",
+                  dist_elem="cosine",
                   periods = 1,
                   n_elems_per_wake=5
                   )
@@ -377,4 +384,4 @@ if __name__ == "__main__":
     print(f"QC = {rotor.QC}")
     print(f"eta = {rotor.eta}")
     rotor.save_performance()
-    rotor.export_dist(res_dir.joinpath('LLM_test_mfkr.csv'))
+    # rotor.export_dist(res_dir.joinpath('LLM_test_mfkr.csv'))
