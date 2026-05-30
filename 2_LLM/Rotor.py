@@ -81,7 +81,8 @@ class Rotor:
         interval = periods*2*np.pi/self.Omega
         angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
         wake_rotations = Rotation.from_euler('x', angles,degrees=False).as_matrix()
-        axial_offsets = np.linspace(np.zeros(3), self.Vinf*(1-a_wake)*interval,n_wake+1)
+        Vwake = self.Vinf*(1+a_wake)
+        axial_offsets = np.linspace(np.zeros(3), Vwake*interval,n_wake+1)
         blade_angles =np.linspace(0,2*np.pi,self.B,endpoint=False)
         blade_rotations= [Rotation.from_euler("x", blade_angle).as_matrix() for blade_angle in blade_angles]
         for axial_rot in blade_angles:
@@ -376,9 +377,9 @@ if __name__ == "__main__":
                   polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
                   Omega = Ome,
                   Vinf=Vinf,
-                  a_wake=0.5,
+                  a_wake=1,
                   rho=1.067,
-                  n_elem=10,
+                  n_elem=1,
                   dist_elem="cosine",
                   periods = 1,
                   n_elems_per_wake=10
@@ -388,7 +389,7 @@ if __name__ == "__main__":
     rotor.plot_blade()
     rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
     # rotor.export_dist(data_dir.joinpath("LLM_distribution.csv"))
-    rotor.plot_performance()
+    # rotor.plot_performance()
     print(f"T = {rotor.T}")
     print(f"TC = {rotor.TC}")
     print(f"Q = {rotor.Q}")
