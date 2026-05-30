@@ -186,7 +186,7 @@ class Rotor:
         gamma_vector = np.zeros(n_ann)
         for i in range(n_ann):
             ann_i = self.annuli[i]
-            gamma,F_azim,F_axial,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
+            gamma,Cy,Cx,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
             # m_gamma[i*n_lines_per_annuli:(i+1)*n_lines_per_annuli]=gamma
             gamma_vector[i]=gamma
         m_gamma = convert_gamma_vector(gamma_vector,n_line,self.n_elems_per_wake,self.B)
