@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.spatial.transform import Rotation
 import pickle
 
@@ -147,7 +148,7 @@ class Rotor:
 
         for i in range(len(self.annuli)):
             ann_i = self.annuli[i]
-            gamma,F_azim,F_axial,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
+            gamma,Cy,Cx,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
             m_gamma[i*n_lines_per_annuli:(i+1)*n_lines_per_annuli]=gamma
         return m_gamma
  
@@ -162,24 +163,26 @@ class Rotor:
     def calculate_spanwise_performance(self):
         perf_dict = {
             "V_i":[],
-            "F_azim": [],
-            "F_axial": [],
+            "Cy": [],
+            "Cx": [],
             "Cl": [],
             "Cd": [],
             "y": [],
+            "r_R": [],
             "gamma": [],
             "alpha": [],
             "phi": [],
         }
         for ann_i in self.annuli:
             
-            gamma,F_azim,F_axial,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
+            gamma,Cy,Cx,Cl,Cd = ann_i.calculate_performance(ann_i.V_i)
             perf_dict["V_i"].append(ann_i.V_i)
-            perf_dict["F_azim"].append(F_azim)
-            perf_dict["F_axial"].append(F_axial)
+            perf_dict["Cy"].append(Cy)
+            perf_dict["Cx"].append(Cx)
             perf_dict["Cl"].append(Cl)
             perf_dict["Cd"].append(Cd)
             perf_dict["y"].append(ann_i.r)
+            perf_dict["r_R"].append(ann_i.r / self.R)
             perf_dict["gamma"].append(gamma)
             perf_dict["alpha"].append(ann_i.alpha)
             perf_dict["phi"].append(ann_i.phi)
@@ -193,7 +196,6 @@ class Rotor:
     def solve(self, tol=0.01, max_iter=1000,step_size = 0.01):
 
         for iteration in range(max_iter):
-            gamma_lst = self.generate_gamma_matrix()
             V_i_old = np.array([ann.V_i for ann in self.annuli])
             V_i_new = self.calculate_induced_velocities()
             for i in range(len(V_i_new)):
@@ -236,6 +238,26 @@ class Rotor:
         ax.set_zlabel('Z')
         plt.tight_layout()
         plt.show()
+    def export_dist(self, file_path: str | Path) -> None:
+        perf_dict = self.calculate_spanwise_performance()
+        n = self.n_elem  # first blade only — all blades are symmetric
+
+        V_i = perf_dict["V_i"][:n]
+        save_df = pd.DataFrame({
+            "r_R"     : perf_dict["r_R"][:n],
+            "alpha"   : perf_dict["alpha"][:n],
+            "phi"     : perf_dict["phi"][:n],
+            "Cl"      : perf_dict["Cl"][:n],
+            "Cd"      : perf_dict["Cd"][:n],
+            "gamma"   : perf_dict["gamma"][:n],
+            "Cy"      : perf_dict["Cy"][:n],
+            "Cx"      : perf_dict["Cx"][:n],
+            "V_i_x"   : [v[0] for v in V_i],
+            "V_i_y"   : [v[1] for v in V_i],
+            "V_i_z"   : [v[2] for v in V_i],
+        })
+        save_df.to_csv(file_path, index=False)
+
     def save_performance(self,file_name="LLM_data.pkl"):
         perf_dict = self.calculate_spanwise_performance()
         with open(file_name, "wb") as f:
@@ -258,8 +280,8 @@ class Rotor:
         plots = [
             (perf_dict["Cl"],      'Cl',              'Lift Coefficient'),
             (perf_dict["Cd"],      'Cd',              'Drag Coefficient'),
-            (perf_dict["F_azim"],  'F_azim [N]',      'Azimuthal Force'),
-            (perf_dict["F_axial"], 'F_axial [N]',     'Axial Force'),
+            (perf_dict["Cy"],  'Cy ',      'Azimuthal Force coeficient'),
+            (perf_dict["Cx"], 'Cx',     'Axial Force coeficient'),
             (V_i_x,       'V_i_x [m/s]',    'Induced Velocity X'),
             (V_i_y,       'V_i_y [m/s]',    'Induced Velocity Y'),
             (V_i_z,       'V_i_z [m/s]',    'Induced Velocity Z'),
@@ -284,11 +306,15 @@ class Rotor:
             
 
 if __name__ == "__main__":
+    j = 1.2
+    R = 0.7
+    Vinf = np.array([60,0,0])
+    n = Vinf[0]/(j*2*R)
+    Ome  = n*2*np.pi
     Vinf = np.array([60,0,0])
     Vinf_wing = np.array([1,0,0])
     c_R_func:Callable = lambda r_R : 0.18-0.06*r_R
     twst_func:Callable = lambda r_R : -50*r_R+35
-    R = 200
     wing_c_R_func:Callable = lambda r_R: np.ones(shape=r_R.shape)/10 #=1
     wing_twst_func:Callable = lambda r_R : r_R*0
     # wing = Rotor(B=1,
@@ -308,13 +334,13 @@ if __name__ == "__main__":
     # wing.plot_performance()
     
     rotor = Rotor(B=6,
-                  R=0.7,
+                  R=R,
                   r_R_H=0.25,
                   c_R_func=c_R_func,
                   twst_func=twst_func,
                   pitch=45,
                   polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
-                  Omega = 225,
+                  Omega = Ome,
                   Vinf=Vinf,
                   rho=1.067,
                   n_elem=40,
@@ -324,7 +350,8 @@ if __name__ == "__main__":
                   )
 
     
-    rotor.plot_blade()
+    # rotor.plot_blade()
     rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
+    # rotor.export_dist(data_dir.joinpath("LLM_distribution.csv"))
     rotor.plot_performance()
     rotor.save_performance()

@@ -143,15 +143,15 @@ class Annuli:
 
         phi_rad = np.deg2rad(self.phi)
         if self.is_prop:
-            F_azim = lift*np.sin(phi_rad)-drag*np.cos(phi_rad)
-            F_axial = lift*np.cos(phi_rad)+drag*np.sin(phi_rad)
+            Cy = Cl *np.sin(phi_rad)-Cd*np.cos(phi_rad)
+            Cx = Cl*np.cos(phi_rad)+Cd*np.sin(phi_rad)
         else:
-            F_azim = lift*np.sin(phi_rad)+drag*np.cos(phi_rad)
-            F_axial = lift*np.cos(phi_rad)-drag*np.sin(phi_rad)
+            Cy = Cl*np.sin(phi_rad)+Cd*np.cos(phi_rad)
+            Cx = Cl*np.cos(phi_rad)-Cd*np.sin(phi_rad)
 
         gamma = 0.5*self.chord*V_norm*Cl
         self.gamma = gamma
-        return gamma,F_azim,F_axial,Cl,Cd
+        return gamma,Cy,Cx,Cl,Cd
     def _load_polar_data(self, polar_path:Path|str) -> Dict[str, np.ndarray]:
         """Function to read the polar data"""
 
