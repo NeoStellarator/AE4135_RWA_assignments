@@ -27,11 +27,12 @@ const_rotor_inputs = dict(
         Vinf = np.array([Vinf,0,0]),
         rho = 1.067,
         dist_elem="uniform",
+        a_wake = 0.4
 )
 
 df = pd.DataFrame([], columns=['i',]) # initialising summary dataframe
 
-sens_mode : Literal['wake_length', 'wake_res', 'blade_res'] = 'wake_length'
+sens_mode : Literal['wake_length', 'wake_res', 'blade_res'] = 'wake_res'#'wake_length'
 
 n_elem_0 = 40
 period_0 = 3
