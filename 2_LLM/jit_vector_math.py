@@ -13,37 +13,36 @@ def calculate_induced_velocity(p1x, p1y, p1z, p2x, p2y, p2z, x, y, z, gamma): #K
     induced_velocity = gamma / (4 * np.pi) * r1r2_cross/(r1r2_norm**2)*(r0@(r1/np.linalg.norm(r1)-r2/np.linalg.norm(r2)))
     return induced_velocity
 @jit(nopython=True)
-def generate_induction_matrix(dist_elem, r_trailing,c_trailing,beta_trailing,r_bound,c_bound,beta_bound,wake_rotations,axial_offsets,blade_rotations):
-        if dist_elem == "uniform":
-            tv_inner_x1_lst = 5/4*c_trailing[:-1]*np.sin(beta_trailing[:-1])
-            tv_inner_y1_lst = r_trailing[:-1]
-            tv_inner_z1_lst = 5/4*c_trailing[:-1]*np.cos(beta_trailing[:-1])
-                
-            tv_inner_x2_lst = c_trailing[:-1]/4*np.sin(beta_trailing[:-1])
-            tv_inner_y2_lst = r_trailing[:-1]
-            tv_inner_z2_lst = c_trailing[:-1]/4*np.cos(beta_trailing[:-1])
+def generate_induction_matrix(r_trailing,c_trailing,beta_trailing,r_bound,c_bound,beta_bound,wake_rotations,axial_offsets,blade_rotations):
+        tv_inner_x1_lst = 5/4*c_trailing[:-1]*np.sin(beta_trailing[:-1])
+        tv_inner_y1_lst = r_trailing[:-1]
+        tv_inner_z1_lst = 5/4*c_trailing[:-1]*np.cos(beta_trailing[:-1])
 
-            tv_outer_x1_lst = c_trailing[1:]/4*np.sin(beta_trailing[1:])
-            tv_outer_y1_lst = r_trailing[1:]
-            tv_outer_z1_lst = c_trailing[1:]/4*np.cos(beta_trailing[1:])
+        tv_inner_x2_lst = c_trailing[:-1]/4*np.sin(beta_trailing[:-1])
+        tv_inner_y2_lst = r_trailing[:-1]
+        tv_inner_z2_lst = c_trailing[:-1]/4*np.cos(beta_trailing[:-1])
 
-            tv_outer_x2_lst = 5/4*c_trailing[1:]*np.sin(beta_trailing[1:])
-            tv_outer_y2_lst = r_trailing[1:]
-            tv_outer_z2_lst = 5/4*c_trailing[1:]*np.cos(beta_trailing[1:])
-            
-            cp_x_lst = 3/4*c_bound*np.sin(beta_bound)
-            cp_y_lst = r_bound
-            cp_z_lst = 3/4*c_bound*np.cos(beta_bound)
+        tv_outer_x1_lst = c_trailing[1:]/4*np.sin(beta_trailing[1:])
+        tv_outer_y1_lst = r_trailing[1:]
+        tv_outer_z1_lst = c_trailing[1:]/4*np.cos(beta_trailing[1:])
 
-            bv_x1_lst = tv_inner_x2_lst
-            bv_y1_lst = tv_inner_y2_lst
-            bv_z1_lst = tv_inner_z2_lst
+        tv_outer_x2_lst = 5/4*c_trailing[1:]*np.sin(beta_trailing[1:])
+        tv_outer_y2_lst = r_trailing[1:]
+        tv_outer_z2_lst = 5/4*c_trailing[1:]*np.cos(beta_trailing[1:])
 
-            bv_x2_lst = tv_outer_x1_lst
-            bv_y2_lst = tv_outer_y1_lst
-            bv_z2_lst = tv_outer_z1_lst
+        cp_x_lst = 3/4*c_bound*np.sin(beta_bound)
+        cp_y_lst = r_bound
+        cp_z_lst = 3/4*c_bound*np.cos(beta_bound)
 
-            
+        bv_x1_lst = tv_inner_x2_lst
+        bv_y1_lst = tv_inner_y2_lst
+        bv_z1_lst = tv_inner_z2_lst
+
+        bv_x2_lst = tv_outer_x1_lst
+        bv_y2_lst = tv_outer_y1_lst
+        bv_z2_lst = tv_outer_z1_lst
+
+
         wake_x1 = []
         wake_y1 = []
         wake_z1 = []
