@@ -85,7 +85,7 @@ elif sens_mode == 'wake_res':
         summary = rotor.make_summary()
         summary['i'] = i
 
-        df = pd.concat([summary])
+        df = pd.concat((df,pd.DataFrame([summary])))
 
     df.to_csv(save_dir.joinpath('sens_wr_summary.csv'), index=False)
 
@@ -108,6 +108,6 @@ elif sens_mode == 'blade_res':
         summary = rotor.make_summary()
         summary['i'] = i
 
-        df = pd.concat([summary])
+        df = pd.concat((df,pd.DataFrame([summary])))
 
     df.to_csv(save_dir.joinpath('sens_br_summary.csv'), index=False)
