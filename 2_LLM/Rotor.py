@@ -341,7 +341,7 @@ class Rotor:
             
 
 if __name__ == "__main__":
-    j = 1.2
+    j = 2.0
     R = 0.7
     Vinf = np.array([60,0,0])
     n = Vinf[0]/(j*2*R)
@@ -377,9 +377,9 @@ if __name__ == "__main__":
                   polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
                   Omega = Ome,
                   Vinf=Vinf,
-                  a_wake=1,
+                  a_wake=0,
                   rho=1.067,
-                  n_elem=1,
+                  n_elem=10,
                   dist_elem="cosine",
                   periods = 1,
                   n_elems_per_wake=10
@@ -389,7 +389,7 @@ if __name__ == "__main__":
     rotor.plot_blade()
     rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
     # rotor.export_dist(data_dir.joinpath("LLM_distribution.csv"))
-    # rotor.plot_performance()
+    rotor.plot_performance()
     print(f"T = {rotor.T}")
     print(f"TC = {rotor.TC}")
     print(f"Q = {rotor.Q}")

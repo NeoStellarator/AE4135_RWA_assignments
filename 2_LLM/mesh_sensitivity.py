@@ -148,7 +148,7 @@ elif sens_mode == 'a_short_wake':
     os.makedirs(save_dir, exist_ok=True)
 
     R = 0.7
-    J = 1.2
+    J = 2.0
     Vinf = 60
     n = Vinf/(J*2*R)
     const_a_wake_rotor_inputs = dict(
