@@ -74,6 +74,10 @@ class Rotor:
         r_R_bound = (r_R_trailing[1:]+r_R_trailing[:-1])/2
         r_bound = r_R_bound*self.R
 
+        self.dr = np.diff(r_trailing)
+        self.r_bound = r_bound
+        
+
         self.c_bound = c_R_func(r_R_bound)*self.R # used later
         c_bound = self.c_bound
         beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
@@ -212,9 +216,10 @@ class Rotor:
             F_azim_lst.append(ann_i.F_azim)
             F_axial_lst.append(ann_i.F_axial)
         
-        self.T = np.trapezoid(F_axial_lst,r_lst)*self.B
-        self.Q = np.trapezoid(F_azim_lst,r_lst)*self.B
-        self.P = self.T*self.Omega
+
+        self.T = self.B * np.trapezoid(F_axial_lst, r_lst)
+        self.Q = self.B * np.trapezoid(np.array(F_azim_lst) * np.array(r_lst), r_lst)
+        self.P = self.Q * self.Omega
 
         V_inf_mag = np.linalg.norm(self.Vinf)
         n = self.Omega/(2*np.pi)
@@ -341,7 +346,7 @@ class Rotor:
             
 
 if __name__ == "__main__":
-    j = 1.2
+    j = 2.0
     R = 0.7
     Vinf = np.array([60,0,0])
     n = Vinf[0]/(j*2*R)
@@ -377,9 +382,9 @@ if __name__ == "__main__":
                   polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
                   Omega = Ome,
                   Vinf=Vinf,
-                  a_wake=1,
+                  a_wake=0,
                   rho=1.067,
-                  n_elem=1,
+                  n_elem=10,
                   dist_elem="cosine",
                   periods = 1,
                   n_elems_per_wake=10
@@ -389,7 +394,7 @@ if __name__ == "__main__":
     rotor.plot_blade()
     rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
     # rotor.export_dist(data_dir.joinpath("LLM_distribution.csv"))
-    # rotor.plot_performance()
+    rotor.plot_performance()
     print(f"T = {rotor.T}")
     print(f"TC = {rotor.TC}")
     print(f"Q = {rotor.Q}")
