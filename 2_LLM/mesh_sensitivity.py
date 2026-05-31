@@ -15,6 +15,12 @@ J = 1.2
 Vinf = 60
 n = Vinf/(J*2*R)
 
+dist : Literal['uniform', 'cosine'] = 'cosine'
+
+if dist == 'uniform': ext = ''
+elif dist == 'cosine': ext = '_c'
+else: raise NotImplementedError("Distribution not implemented!")
+
 const_rotor_inputs = dict(
         B=6,
         R=R,
@@ -26,19 +32,19 @@ const_rotor_inputs = dict(
         Omega = n*2*np.pi,
         Vinf = np.array([Vinf,0,0]),
         rho = 1.067,
-        dist_elem="uniform",
+        dist_elem=dist,
         a_wake = 0
 )
 
 df = pd.DataFrame([], columns=['i',]) # initialising summary dataframe
 
-sens_mode : Literal['wake_length', 'wake_res', 'blade_res','a_wake','a_short_wake'] = 'a_short_wake'
+sens_mode : Literal['wake_length', 'wake_res', 'blade_res','a_wake','a_short_wake'] = 'blade_res'
 
 n_elem_0 = 40
 period_0 = 3
 n_elem_per_wake_0 = 10
 
-n_elem_lst = [10, 20, 40, 80, 120, 160, 200]
+n_elem_lst = [10, 20, 40, 80]#, 120, 160, 200]
 period_lst  = np.arange(1,30,2, dtype='int32')
 n_elem_per_wake_lst = [10, 20, 40, 80, 120, 160, 200]
 
@@ -56,14 +62,14 @@ if sens_mode == 'wake_length':
         )
 
         rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
-        rotor.export_dist(save_dir.joinpath(f'sens_wl_n={i:>02}.csv'))
+        rotor.export_dist(save_dir.joinpath(f'sens_wl_n={i:>02}{ext}.csv'))
 
         summary = rotor.make_summary()
         summary['i'] = i
 
         df = pd.concat((df,pd.DataFrame([summary])))
 
-    df.to_csv(save_dir.joinpath('sens_wl_summary.csv'), index=False)
+    df.to_csv(save_dir.joinpath(f'sens_wl_summary{ext}.csv'), index=False)
 
 elif sens_mode == 'wake_res':
 
@@ -81,14 +87,14 @@ elif sens_mode == 'wake_res':
         )
     
         rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
-        rotor.export_dist(save_dir.joinpath(f'sens_wr_n={i:>02}.csv'))
+        rotor.export_dist(save_dir.joinpath(f'sens_wr_n={i:>02}{ext}.csv'))
 
         summary = rotor.make_summary()
         summary['i'] = i
 
         df = pd.concat((df,pd.DataFrame([summary])))
 
-    df.to_csv(save_dir.joinpath('sens_wr_summary.csv'), index=False)
+    df.to_csv(save_dir.joinpath(f'sens_wr_summary{ext}.csv'), index=False)
 
 elif sens_mode == 'blade_res':
 
@@ -104,14 +110,14 @@ elif sens_mode == 'blade_res':
         )
     
         rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
-        rotor.export_dist(save_dir.joinpath(f'sens_br_n={i:>02}.csv'))
+        rotor.export_dist(save_dir.joinpath(f'sens_br_n={i:>02}{ext}.csv'))
 
         summary = rotor.make_summary()
         summary['i'] = i
 
         df = pd.concat((df,pd.DataFrame([summary])))
 
-    df.to_csv(save_dir.joinpath('sens_br_summary.csv'), index=False)
+    df.to_csv(save_dir.joinpath(f'sens_br_summary{ext}.csv'), index=False)
 elif sens_mode == 'a_wake':
     save_dir = res_dir.joinpath('sensitivity/a_wake')
     os.makedirs(save_dir, exist_ok=True)
@@ -131,7 +137,7 @@ elif sens_mode == 'a_wake':
             Omega = n*2*np.pi,
             Vinf = np.array([Vinf,0,0]),
             rho = 1.067,
-            dist_elem="uniform",
+            dist_elem=dist,
             n_elems_per_wake = 30,
             n_elem = 30,
             periods = 20,
@@ -142,7 +148,7 @@ elif sens_mode == 'a_wake':
         rotor = Rotor(**const_a_wake_rotor_inputs,
                     a_wake=a_wake)
         rotor.solve()
-        rotor.export_dist(save_dir.joinpath(f'sens_a_wake_n={a_wake:.2f}.csv'))
+        rotor.export_dist(save_dir.joinpath(f'sens_a_wake_n={a_wake:.2f}{ext}.csv'))
 elif sens_mode == 'a_short_wake':
     save_dir = res_dir.joinpath('sensitivity/a_short_wake')
     os.makedirs(save_dir, exist_ok=True)
@@ -162,7 +168,7 @@ elif sens_mode == 'a_short_wake':
             Omega = n*2*np.pi,
             Vinf = np.array([Vinf,0,0]),
             rho = 1.067,
-            dist_elem="uniform",
+            dist_elem=dist,
             n_elems_per_wake = 30,
             n_elem = 30,
             periods = 1,
@@ -173,6 +179,6 @@ elif sens_mode == 'a_short_wake':
         rotor = Rotor(**const_a_wake_rotor_inputs,
                     a_wake=a_wake)
         rotor.solve()
-        rotor.export_dist(save_dir.joinpath(f'sens_a_short_wake_n={a_wake:.2f}.csv'))
+        rotor.export_dist(save_dir.joinpath(f'sens_a_short_wake_n={a_wake:.2f}{ext}.csv'))
 
 
