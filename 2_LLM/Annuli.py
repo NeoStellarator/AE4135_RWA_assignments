@@ -16,6 +16,7 @@ class Annuli:
                  Vinf:np.ndarray,
                  rho: float,
                  Omega:float,
+                 B:int
                  ):
         self.polar_path = polar_path
         self.r = r
@@ -35,6 +36,7 @@ class Annuli:
         self.Omega = Omega
         self.phi=0
         self.alpha=0
+        self.B=B
 
 
         self.V_i = np.zeros(3)
@@ -153,6 +155,8 @@ class Annuli:
         # computing induction factors
         a     = V_axial/np.linalg.norm(self.Vinf) - 1
         aline = 1-V_axial/(self.Omega*self.r)
+        sig = self.B/(2*np.pi)*self.chord/self.r # blade solidity
+        self.CT = Cx*sig*((1+a)/np.sin(phi_rad))**2 # Ning (27)
 
         gamma = 0.5*self.chord*V_norm*Cl
         self.gamma = gamma

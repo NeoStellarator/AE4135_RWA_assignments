@@ -65,7 +65,8 @@ class Rotor:
             r_R_trailing = (1 - np.cos(np.linspace(0, np.pi, n_elem+1)))/2 * (1-r_R_H) + r_R_H
         else:
             raise NotImplementedError("Only uniform/cosine spacing is implemented!")
-
+            
+        
         r_trailing = r_R_trailing*self.R
 
         c_trailing = c_R_func(r_R_trailing)*self.R
@@ -74,12 +75,21 @@ class Rotor:
         r_R_bound = (r_R_trailing[1:]+r_R_trailing[:-1])/2
         r_bound = r_R_bound*self.R
 
+        self.dr = np.diff(r_trailing)
+        self.r_bound = r_bound
+        
+
         self.c_bound = c_R_func(r_R_bound)*self.R # used later
         c_bound = self.c_bound
         beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
         n_wake = n_elems_per_wake*periods
-        interval = periods*2*np.pi/self.Omega
-        angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
+        if self.Omega == 0:
+            angles=  np.zeros(n_wake+1).reshape((n_wake+1,1))
+            interval = self.R
+        else:
+            angles = np.linspace(0,-2*np.pi*periods,n_wake+1).reshape((n_wake+1,1))
+            interval = periods*2*np.pi/self.Omega
+        
         wake_rotations = Rotation.from_euler('x', angles,degrees=False).as_matrix()
         Vwake = self.Vinf*(1+a_wake)
         axial_offsets = np.linspace(np.zeros(3), Vwake*interval,n_wake+1)
@@ -89,7 +99,7 @@ class Rotor:
             axial_rot_matrix = Rotation.from_euler("x", axial_rot).as_matrix()
             for i in range(len(r_bound)):
                 ann = Annuli(polar_path=polar_path, r=r_bound[i], chord=c_bound[i],axial_rot_matrix=axial_rot_matrix,
-                            beta=np.rad2deg(beta_bound[i]), Vinf=Vinf,rho=self.rho, Omega=Omega)
+                            beta=np.rad2deg(beta_bound[i]), Vinf=Vinf,rho=self.rho, Omega=Omega,B=self.B)
                 self.annuli.append(ann)
         self.m_induced,self.p1_lst,self.p2_lst = generate_induction_matrix(r_trailing=r_trailing,c_trailing=c_trailing,beta_trailing=beta_trailing,r_bound=r_bound,c_bound=self.c_bound,beta_bound=beta_bound,wake_rotations=wake_rotations,axial_offsets=axial_offsets,blade_rotations=blade_rotations)
         # print("Generated induction matrix!!")
@@ -148,6 +158,7 @@ class Rotor:
             "V_i":[],
             "Cy": [],
             "Cx": [],
+            "Ct": [],
             "Cl": [],
             "Cd": [],
             "y": [],
@@ -164,6 +175,7 @@ class Rotor:
             perf_dict["V_i"].append(ann_i.V_i)
             perf_dict["Cy"].append(Cy)
             perf_dict["Cx"].append(Cx)
+            perf_dict["Ct"].append(ann_i.CT)
             perf_dict["Cl"].append(Cl)
             perf_dict["Cd"].append(Cd)
             perf_dict["a"].append(a)
@@ -212,9 +224,10 @@ class Rotor:
             F_azim_lst.append(ann_i.F_azim)
             F_axial_lst.append(ann_i.F_axial)
         
-        self.T = np.trapezoid(F_axial_lst,r_lst)*self.B
-        self.Q = np.trapezoid(F_azim_lst,r_lst)*self.B
-        self.P = self.T*self.Omega
+
+        self.T = self.B * np.trapezoid(F_axial_lst, r_lst)
+        self.Q = self.B * np.trapezoid(np.array(F_azim_lst) * np.array(r_lst), r_lst)
+        self.P = self.Q * self.Omega
 
         V_inf_mag = np.linalg.norm(self.Vinf)
         n = self.Omega/(2*np.pi)
@@ -285,6 +298,7 @@ class Rotor:
             "gamma"   : perf_dict["gamma"][:n],
             "Cy"      : perf_dict["Cy"][:n],
             "Cx"      : perf_dict["Cx"][:n],
+            "Ct"      : perf_dict["Ct"][:n],
             "a"       : perf_dict["a"][:n],
             "aline"   : perf_dict["aline"][:n],
             "V_i_x"   : [v[0] for v in V_i],
@@ -341,7 +355,7 @@ class Rotor:
             
 
 if __name__ == "__main__":
-    j = 1.2
+    j = 2.0
     R = 0.7
     Vinf = np.array([60,0,0])
     n = Vinf[0]/(j*2*R)
@@ -352,53 +366,54 @@ if __name__ == "__main__":
     twst_func:Callable = lambda r_R : -50*r_R+35
     wing_c_R_func:Callable = lambda r_R: np.ones(shape=r_R.shape)/10 #=1
     wing_twst_func:Callable = lambda r_R : r_R*0
-    # wing = Rotor(B=1,
-    #               R=R,
-    #               r_R_H=0,
-    #               c_R_func=wing_c_R_func,
-    #               twst_func=wing_twst_func,
-    #               pitch=90,
-    #               polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
-    #               Omega = 0,
-    #               Vinf=Vinf_wing,
-    #               rho=1,
-    #               n_elem=30,
-    #               dist_elem="uniform")
-    # wing.plot_blade()
-    # wing.solve(tol=1e-2,step_size=0.01)
-    # wing.plot_performance()
-    
-    rotor = Rotor(B=6,
+    wing = Rotor(B=1,
                   R=R,
-                  r_R_H=0.25,
-                  c_R_func=c_R_func,
-                  twst_func=twst_func,
-                  pitch=45,
+                  r_R_H=0,
+                  c_R_func=wing_c_R_func,
+                  twst_func=wing_twst_func,
+                  pitch=0,
                   polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
-                  Omega = Ome,
-                  Vinf=Vinf,
-                  a_wake=1,
-                  rho=1.067,
-                  n_elem=1,
-                  dist_elem="cosine",
-                  periods = 1,
-                  n_elems_per_wake=10
-                  )
+                  Omega = 0,
+                  Vinf=Vinf_wing,
+                  rho=1,
+                  n_elem=30,
+                  a_wake=0,
+                  dist_elem="uniform")
+    wing.plot_blade()
+    wing.solve(tol=1e-2,step_size=0.01)
+    wing.plot_performance()
+    
+    # rotor = Rotor(B=6,
+    #               R=R,
+    #               r_R_H=0.25,
+    #               c_R_func=c_R_func,
+    #               twst_func=twst_func,
+    #               pitch=45,
+    #               polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
+    #               Omega = Ome,
+    #               Vinf=Vinf,
+    #               a_wake=0,
+    #               rho=1.067,
+    #               n_elem=10,
+    #               dist_elem="cosine",
+    #               periods = 1,
+    #               n_elems_per_wake=10
+    #               )
 
     
-    rotor.plot_blade()
-    rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
-    # rotor.export_dist(data_dir.joinpath("LLM_distribution.csv"))
+    # rotor.plot_blade()
+    # rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
+    # # rotor.export_dist(data_dir.joinpath("LLM_distribution.csv"))
     # rotor.plot_performance()
-    print(f"T = {rotor.T}")
-    print(f"TC = {rotor.TC}")
-    print(f"Q = {rotor.Q}")
-    print(f"P = {rotor.P}")
-    print(f"CT = {rotor.CT}")
-    print(f"CP = {rotor.CP}")
-    print(f"PC = {rotor.PC}")
-    print(f"CQ = {rotor.CQ}")
-    print(f"QC = {rotor.QC}")
-    print(f"eta = {rotor.eta}")
-    rotor.save_performance()
+    # print(f"T = {rotor.T}")
+    # print(f"TC = {rotor.TC}")
+    # print(f"Q = {rotor.Q}")
+    # print(f"P = {rotor.P}")
+    # print(f"CT = {rotor.CT}")
+    # print(f"CP = {rotor.CP}")
+    # print(f"PC = {rotor.PC}")
+    # print(f"CQ = {rotor.CQ}")
+    # print(f"QC = {rotor.QC}")
+    # print(f"eta = {rotor.eta}")
+    # rotor.save_performance()
     # rotor.export_dist(res_dir.joinpath('LLM_test_mfkr.csv'))
