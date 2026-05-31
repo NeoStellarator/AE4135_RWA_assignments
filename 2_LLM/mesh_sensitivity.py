@@ -38,7 +38,7 @@ const_rotor_inputs = dict(
 
 df = pd.DataFrame([], columns=['i',]) # initialising summary dataframe
 
-sens_mode : Literal['wake_length', 'wake_res', 'blade_res','a_wake','a_short_wake'] = 'blade_res'
+sens_mode : Literal['wake_length', 'wake_res', 'blade_res','a_wake','a_short_wake'] = 'a_short_wake'
 
 n_elem_0 = 40
 period_0 = 3
@@ -163,7 +163,7 @@ elif sens_mode == 'a_short_wake':
             r_R_H=0.25,
             c_R_func= lambda r_R : 0.18-0.06*r_R,
             twst_func= lambda r_R : -50*r_R+35 ,
-            pitch=45,
+            pitch=46,
             polar_path=data_dir.joinpath("ARAD8pct_polar.txt"),
             Omega = n*2*np.pi,
             Vinf = np.array([Vinf,0,0]),

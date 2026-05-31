@@ -239,7 +239,8 @@ class Rotor:
             'Q': self.Q,
             'P': self.P,
             'QC': self.QC,
-            'TC': self.TC
+            'TC': self.TC,
+            'PC': self.PC,
         }])
         
         if os.path.isfile(file_path):
