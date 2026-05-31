@@ -74,6 +74,10 @@ class Rotor:
         r_R_bound = (r_R_trailing[1:]+r_R_trailing[:-1])/2
         r_bound = r_R_bound*self.R
 
+        self.dr = np.diff(r_trailing)
+        self.r_bound = r_bound
+        
+
         self.c_bound = c_R_func(r_R_bound)*self.R # used later
         c_bound = self.c_bound
         beta_bound = np.deg2rad(self.pitch+twst_func(r_R_bound))
@@ -212,9 +216,10 @@ class Rotor:
             F_azim_lst.append(ann_i.F_azim)
             F_axial_lst.append(ann_i.F_axial)
         
-        self.T = np.trapezoid(F_axial_lst,r_lst)*self.B
-        self.Q = np.trapezoid(F_azim_lst,r_lst)*self.B
-        self.P = self.T*self.Omega
+
+        self.T = self.B * np.trapezoid(F_axial_lst, r_lst)
+        self.Q = self.B * np.trapezoid(np.array(F_azim_lst) * np.array(r_lst), r_lst)
+        self.P = self.Q * self.Omega
 
         V_inf_mag = np.linalg.norm(self.Vinf)
         n = self.Omega/(2*np.pi)
