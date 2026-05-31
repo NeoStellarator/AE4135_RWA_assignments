@@ -15,10 +15,10 @@ J = 2.0
 Vinf = 60
 n = Vinf/(J*2*R)
 
-dist : Literal['uniform', 'cosine'] = 'uniform'
+dist : Literal['uniform', 'cosine'] = 'cosine'
 
 if dist == 'uniform': ext = ''
-elif dist == 'cosine': ext = '_c'
+elif dist == 'cosine': ext = ''
 else: raise NotImplementedError("Distribution not implemented!")
 
 const_rotor_inputs = dict(
@@ -37,16 +37,16 @@ const_rotor_inputs = dict(
 
 df = pd.DataFrame([], columns=['i',]) # initialising summary dataframe
 
-sens_mode : Literal['wake_length', 'wake_res', 'blade_res','a_wake','a_short_wake'] = 'a_wake'
+sens_mode : Literal['wake_length', 'wake_res', 'blade_res','a_wake'] = 'wake_length'
 
-n_elem_0 = 40
+n_elem_0 = 30
 period_0 = 3
 n_elem_per_wake_0 = 10
-a_wake_0 = 0
+a_wake_0 = 0.2
 
-n_elem_lst = [10, 20, 40, 80]#, 120, 160, 200]
-period_lst  = np.arange(1,30,2, dtype='int32')
-n_elem_per_wake_lst = [10, 20, 40, 80, 120, 160, 200]
+n_elem_lst = [10, 15, 20, 30, 40, 60]# 80, 120, 160, 200]
+period_lst  = np.arange(1,11,1, dtype='int32')
+n_elem_per_wake_lst = [5, 10, 15, 20, 30, 40, 60, 80]
 a_wake_lst = np.linspace(0, 0.5, 6)
 
 
@@ -61,6 +61,7 @@ if sens_mode == 'wake_length':
             n_elem = n_elem_0,
             periods = i,
             n_elems_per_wake=n_elem_per_wake_0,
+            a_wake=a_wake_0,
         )
 
         rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
@@ -86,6 +87,7 @@ elif sens_mode == 'wake_res':
             n_elem = n_elem_0,
             periods = period_0,
             n_elems_per_wake=i,
+            a_wake=a_wake_0,
         )
     
         rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
@@ -109,6 +111,7 @@ elif sens_mode == 'blade_res':
             n_elem = i,
             periods = period_0,
             n_elems_per_wake=n_elem_per_wake_0,
+            a_wake=a_wake_0,
         )
     
         rotor.solve(tol = 1e-6,step_size=0.01,max_iter =10000)
@@ -136,6 +139,11 @@ elif sens_mode == 'a_wake':
         
         rotor.solve()
         rotor.export_dist(save_dir.joinpath(f'sens_a_wake_n={a_wake:.2f}{ext}.csv'))
+
+        summary = rotor.make_summary()
+        summary['i'] = a_wake
+
+        df = pd.concat((df,pd.DataFrame([summary])))
 
     df.to_csv(save_dir.joinpath(f'sens_a_wake_summary{ext}.csv'), index=False)
 
